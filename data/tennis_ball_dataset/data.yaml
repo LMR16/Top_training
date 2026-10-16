@@ -1,0 +1,10 @@
+# Dataset de Bola de Tênis - YOLOv8
+
+path: ../data/tennis_ball_dataset  # raiz do dataset
+train: images/train
+val: images/val
+test: images/test
+
+# Classes
+nc: 1
+names: ['tennis_ball']
