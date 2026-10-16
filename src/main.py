@@ -1,11 +1,11 @@
-"""Ponto de entrada da aplicação Top Training."""
+"""Ponto de entrada da aplicação Top Training (Treino Real com Câmera)."""
 
-from src.ui.main_window import MainWindow
+import sys
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-def main() -> None:
-    app = MainWindow()
-    app.run()
+from src.ui.app import main
 
 
 if __name__ == "__main__":

@@ -1,1 +1,1 @@
-"""Interface gráfica DearPyGui."""
+"""Pacote de interface grafica (CustomTkinter)."""
