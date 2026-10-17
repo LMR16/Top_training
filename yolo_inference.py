@@ -1,10 +1,10 @@
 from ultralytics import YOLO
 
 # Carrega o modelo com os melhores pesos gerados no treinamento
-model = YOLO('models/yolov8_best.pt')
+model = YOLO('models/yolov8_best_2.pt')
 
 # Executa a inferência no vídeo de entrada, salva o resultado e define a confiança mínima (20%)
-result = model.predict('src\\input_videos\\input_video.mp4', conf=0.2, save=True)
+result = model.track('src\\input_videos\\quadra_2.MOV', conf=0.5, imgsz=1280, persist=True, tracker="bytetrack.yaml", save=True)
 
 print(result)
 print("boxes:")

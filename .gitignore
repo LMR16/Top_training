@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+src/frames_extraidos/*.jpg
+
 # C extensions
 *.so
 
