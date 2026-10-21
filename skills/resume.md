@@ -1,141 +1,90 @@
 # Resumo e Mapa de Referência do Projeto — Top Training
 
-> **Propósito deste arquivo:** Servir como fonte única de referência rápida (para desenvolvedores e assistentes de IA) sobre onde estão localizados todos os códigos, modelos, vídeos, dados e documentações do projeto, diferenciando claramente o **que já existe e está funcional** do **que está planejado na documentação**.
+> **Propósito deste arquivo:** Servir como fonte única de referência rápida (para desenvolvedores e assistentes de IA) sobre onde estão localizados todos os códigos, modelos, vídeos, dados e documentações do projeto.
 
 ---
 
 ## 1. Visão Geral do Projeto
 
-O **Top Training** é um sistema de visão computacional voltado à análise de treinos de tênis.
-- **Estado Atual (Implementado):** Pipeline de detecção e rastreamento de bola de tênis em vídeo usando **YOLOv8 customizado (`yolov8_best.pt`)**, filtragem de falsos positivos pela maior confiança por frame, cache de detecções via `pickle` (`stubs/`), interpolação linear de frames sem detecção via `pandas` e renderização do vídeo anotado com OpenCV.
-- **Meta do Produto (Planejado em `docs/`):** Aplicação desktop com interface gráfica, captura ao vivo via câmera (Iriun Webcam), calibração manual da quadra por polígono, detecção de quiques (*bounces*) e pontuação por zonas de dificuldade (Básico, Médio, Avançado).
+O **Top Training** é um sistema de treinamento gamificado de tênis por visão computacional.
+- **Motor de Visão Computacional (`trackers/` + `main.py`):** Detecção de bolas de tênis em movimento usando **YOLOv8 (`yolov8_best_2.pt`)**, filtro de movimento real (`cv2.absdiff`) para ignorar bolas paradas no chão, continuidade espacial, interpolação controlada via `pandas` e detecção automática do instante do quique (*bounce*) pela inversão da trajetória vertical $Y$.
+- **Aplicação Web/Desktop (`app/`):** Interface em **HTML5 / CSS3 / JavaScript Puro** (Tema Escuro Esportivo estilo SwingVision) conectada ao back-end Python (**FastAPI**), com suporte a vídeos gravados e câmera ao vivo (**Iriun Webcam**), calibração interativa de 4 pontos com homografia $H$ (pixel $\rightarrow$ metros), validação de homografia (`UC09`), níveis de dificuldade (Básico 2 zonas, Médio 3 colunas, Avançado grade $3\times 2$), seleção de zona-foco, placar em tempo real com filtro de 1º quique, feedback sonoro/visual e ranking por nível salvo em JSON.
 
 ---
 
-## 2. Mapa de Diretórios e Arquivos Atuais (Estado Real)
+## 2. Mapa Completo de Diretórios e Arquivos
 
 ```text
 Top_training/
-├── main.py                         # [ATIVO] Ponto de entrada principal do pipeline de vídeo + interpolação
-├── yolo_inference.py               # [ATIVO] Script simples para testar inferência bruta do YOLO
-├── requirements.txt                # Dependências base do projeto
+├── main.py                         # [CLI] Script isolado para processar vídeos e salvar em runs/Ball_Tracker/
+├── yolo_inference.py               # [CLI] Script de teste rápido de inferência/tracking do YOLO
+├── video_to_frame.py               # [CLI] Extrator de frames de vídeos para anotação no Roboflow
+├── requirements.txt                # Dependências do projeto (OpenCV, Ultralytics, Pandas, FastAPI, Uvicorn)
 ├── README.md                       # Apresentação geral do repositório
-├── .gitignore                      # Arquivos e pastas ignorados pelo Git
 │
-├── trackers/                       # [ATIVO] Pacote de rastreamento e pós-processamento
+├── app/                            # [APP] Aplicativo completo (Front-end JS + Back-end Python FastAPI)
 │   ├── __init__.py
-│   └── ball_tracker.py             # Classe BallTracker (detecção YOLO, cache pickle, interpolação Pandas, desenho OpenCV)
+│   ├── app_main.py                 # Servidor FastAPI (porta 8000), streaming MJPEG e abertura automática no navegador
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── homography.py           # Calibração de 4 pontos, matriz H (pixel <-> metros) e erro de reprojeção
+│   │   ├── game_engine.py          # Zonas (Básico=2, Médio=3, Avançado=6), pontuação (+10/-5) e filtro de 1º quique
+│   │   └── storage.py              # Persistência JSON de perfis, histórico de sessões, ranking e homografia
+│   ├── data/
+│   │   ├── homografia.json         # Calibração de 4 pontos persistida
+│   │   └── profiles.json           # Perfis de jogadores e sessões salvas
+│   └── static/
+│       ├── index.html              # SPA com as 5 telas (Perfil/Fonte, Calibração, Zona-Foco, Treino, Resumo/Ranking)
+│       ├── style.css               # Estilização Dark Mode Esportivo
+│       └── app.js                  # Canvas 2D interativo, arraste de 4 pontos, WebAudio API e atualização ao vivo
 │
-├── models/                         # [ATIVO] Pesos do modelo YOLOv8 treinado para bola de tênis
-│   ├── yolov8_best.pt              # Melhor peso do treinamento (usado em main.py e yolo_inference.py)
-│   └── yolov8_last.pt              # Último checkpoint do treinamento
+├── trackers/                       # [CV] Pacote central de rastreamento e detecção de quiques
+│   ├── __init__.py
+│   └── ball_tracker.py             # Classe BallTracker (detect_frames, detect_frame c/ absdiff, interpolate, detect_bounces, draw_boxes)
 │
-├── stubs/                          # [ATIVO] Cache de detecções para acelerar execuções repetidas
-│   └── ball_detections.pkl         # Lista serializada de detecções frame a frame do vídeo de entrada
+├── models/                         # [MODELOS] Pesos treinados do YOLOv8
+│   ├── yolov8_best_2.pt            # [PADRÃO ATUAL] Melhor modelo (mAP50=86.1%, Recall=81.8%, mAP50-95=62.4%)
+│   ├── yolov8_best.pt              # 1ª versão treinada
+│   ├── yolov8_best_3.pt            # 3ª versão treinada
+│   └── yolov8_last*.pt             # Checkpoints finais de cada treino
 │
-├── runs/                           # [ATIVO] Saídas geradas pelo processamento de vídeo e YOLO
-│   ├── output_video.mp4            # Vídeo final gerado pelo main.py (com caixa amarela e centro verde interpolado)
-│   └── detect/
-│       ├── predict/                # Saída do teste bruto yolo_inference.py (8224226-hd_1280_720_30fps.avi)
-│       └── predict2/               # Saída do teste bruto yolo_inference.py (input_video.avi)
+├── src/
+│   ├── input_videos/               # [VÍDEOS] Vídeos de entrada (.mp4 e .MOV) para testes e calibração
+│   │   ├── treino_1.mp4, treino_2.mp4, treino_3.mp4
+│   │   └── quadra_1.MOV, quadra_2.MOV, quadra_3.MOV
+│   └── models/                     # Pesos base (yolov8n.pt, yolo5_last.pt)
 │
-├── src/                            # Recursos de mídia e modelos base (futura raiz modular planejada)
-│   ├── input_videos/               # [ATIVO] Vídeos de entrada para testes (1280x720 @ 30fps)
-│   │   ├── input_video.mp4         # Vídeo padrão usado pelo main.py (214 frames)
-│   │   ├── 17290112-hd_1280_720_30fps.mp4
-│   │   └── 8224226-hd_1280_720_30fps.mp4
-│   └── models/                     # Pesos base/legados
-│       ├── yolov8n.pt              # Modelo base YOLOv8 Nano (COCO)
-│       ├── yolo5_last.pt           # Modelo legado YOLOv5
-│       └── .gitkeep
+├── stubs/                          # [CACHE] Detecções serializadas (.pkl) por vídeo e modelo
+├── runs/
+│   ├── Ball_Tracker/               # Vídeos numerados gerados pelo main.py (out_video_1.mp4, out_video_2.mp4...)
+│   ├── saves_good_videos/          # Vídeos validados salvos pelo usuário
+│   └── detect/                     # Saídas brutas de testes do YOLO
 │
-├── notebooks/                      # [ATIVO] Experimentação e preparação de Dataset
-│   ├── training.ipynb              # Download do dataset Roboflow e ajuste de diretórios
-│   └── tennis-ball-detection-6/    # Dataset baixado do Roboflow (formato YOLOv8, 1 classe: 'tennis ball')
-│       ├── data.yaml               # Configuração do dataset
-│       └── tennis-ball-detection-6/
-│           ├── train/              # Imagens e labels de treino
-│           ├── valid/              # Imagens e labels de validação
-│           └── test/               # Imagens e labels de teste
+├── docs/                           # Documentação do projeto
+│   ├── arquitetura_app_js.md       # Especificação das 20 decisões do App JS + FastAPI e Trabalhos Futuros (Smartwatch)
+│   ├── Entrega_2/
+│   │   ├── Projeto_integrador_rel_1 (1).tex
+│   │   ├── Projeto_integrador_rel_1 (1).pdf
+│   │   ├── Projeto_integrador_rel_1.md      # Transcrição completa do relatório em Markdown
+│   │   └── requisitos_status.png            # Imagem 16:9 de status dos requisitos para apresentação no Canva
+│   ├── escopo.md, arquitetura.md, roteiro.md, treino_modelo.md
 │
-├── docs/                           # Documentação de escopo, arquitetura e planejamento
-│   ├── escopo.md                   # Requisitos funcionais do app e regras de negócio
-│   ├── arquitetura.md              # Estrutura modular planejada (src/ui, src/cv, src/data, src/utils)
-│   ├── roteiro.md                  # Roadmap de 6 fases do projeto
-│   └── treino_modelo.md            # Guia planejado para extração de frames e comparação de modelos
-│
-├── skills/                         # Referências rápidas para contexto de desenvolvimento e IA
-│   └── resume.md                   # Este arquivo de mapeamento geral do projeto
-│
-└── .venv/                          # Ambiente virtual Python 3.12
+└── skills/
+    └── resume.md                   # Este arquivo de referência rápida
 ```
 
 ---
 
-## 3. Onde Está Cada Lógica no Código Atual
+## 3. Como Executar
 
-### 3.1. Execução Principal — `main.py`
-Localizado na raiz (`main.py`), executa o fluxo ponta a ponta:
-1. Define os caminhos principais:
-   - Vídeo de entrada: `src/input_videos/input_video.mp4`
-   - Vídeo de saída: `runs/output_video.mp4`
-   - Modelo: `models/yolov8_best.pt`
-   - Cache (stub): `stubs/ball_detections.pkl`
-2. Carrega todos os frames do vídeo em memória com `cv2.VideoCapture`.
-3. Instancia `BallTracker(model_path)`.
-4. Obtém as detecções chamando `tracker.detect_frames(frames, read_stub=True, stub_path=stub_path)`.
-5. Interpola detecções ausentes com `tracker.interpolate_ball_positions(ball_detections)`.
-6. Desenha as anotações visuais com `tracker.draw_boxes(frames, ball_detections)`.
-7. Exporta o vídeo final em `runs/output_video.mp4` (codec `mp4v`, 30 FPS).
-
-### 3.2. Rastreamento e Interpolação — `trackers/ball_tracker.py`
-Contém a classe `BallTracker`:
-- **`__init__(self, model_path)`**: Carrega o modelo `YOLO(model_path)` da biblioteca `ultralytics`.
-- **`detect_frames(self, frames, read_stub=False, stub_path=None)`**:
-  - Se `read_stub=True` e o arquivo `stub_path` existir (`os.path.exists`), carrega e retorna a lista de detecções via `pickle`.
-  - Caso contrário, processa cada frame chamando `detect_frame(frame)` e salva o resultado em `stub_path`.
-- **`detect_frame(self, frame)`**:
-  - Roda `self.model.predict(frame, conf=0.15, verbose=False)[0]`.
-  - Seleciona apenas a caixa com **maior nível de confiança** (`max(results.boxes, key=lambda b: b.conf[0].item())`) e armazena no dicionário com chave `1`: `{1: [x1, y1, x2, y2]}`.
-- **`interpolate_ball_positions(self, ball_positions)`**:
-  - Converte a lista de dicionários em um `pandas.DataFrame` com colunas `['x1', 'y1', 'x2', 'y2']`.
-  - Preenche falhas de detecção usando interpolação linear seguida de `bfill()` e `ffill()`.
-  - Retorna a lista reconstruída no formato `[{1: [x1, y1, x2, y2]}, ...]`.
-- **`draw_boxes(self, video_frames, ball_detections)`**:
-  - Calcula o centro `(center_x, center_y)` da bola e desenha um círculo verde preenchido (`(0, 255, 0)`, raio 6).
-  - Desenha a caixa delimitadora amarela (`(0, 255, 255)`, espessura 2) ao redor da bola.
-
-### 3.3. Teste Rápido de Inferência — `yolo_inference.py`
-Script enxuto na raiz para testar o modelo `models/yolov8_best.pt` diretamente sobre `src/input_videos/input_video.mp4` com `conf=0.2` e `save=True`, imprimindo as *bounding boxes* do primeiro frame no terminal.
-
----
-
-## 4. Pontos de Atenção (Divergências entre `docs/` e o Código Atual)
-
-Para evitar confusões durante o desenvolvimento, observe as diferenças entre o que está escrito em `docs/` e o que existe de fato no repositório:
-
-1. **Ponto de Entrada (`main.py` vs `src/main.py`):**
-   - O `README.md` e `docs/arquitetura.md` mencionam `python src/main.py`, porém `src/main.py` **não existe** atualmente. O código funcional está em **`main.py` na raiz** e em **`trackers/ball_tracker.py`**.
-2. **Módulos Planejados Ainda Não Criados:**
-   - As pastas `src/ui/`, `src/cv/`, `src/data/`, `src/utils/`, `scripts/` e `tests/` descritas em `docs/arquitetura.md` e `docs/treino_modelo.md` são parte do planejamento das próximas fases e ainda não foram criadas no disco.
-3. **Duas Pastas de Modelos (`models/` vs `src/models/`):**
-   - **`models/` (na raiz):** Contém os pesos treinados ativos (`yolov8_best.pt` e `yolov8_last.pt`). É esta pasta que `main.py` e `yolo_inference.py` utilizam.
-   - **`src/models/`:** Contém os modelos base/antigos (`yolov8n.pt` e `yolo5_last.pt`).
-4. **Biblioteca de Interface Gráfica:**
-   - Os documentos em `docs/` mencionam `DearPyGui`, mas o arquivo `requirements.txt` especifica `customtkinter==5.2.2`.
-5. **Dependências no Ambiente Virtual (`.venv`):**
-   - O código em `trackers/ball_tracker.py` utiliza `pandas` (instalado no `.venv` junto ao `ultralytics`), embora `pandas` não esteja listado explicitamente no `requirements.txt`.
-
----
-
-## 5. Comandos Úteis de Referência
-
+### 3.1. Abrir o Aplicativo Completo (Interface JS + FastAPI)
 ```powershell
-# Executar o pipeline principal (usando o Python do ambiente virtual)
-.\.venv\Scripts\python.exe main.py
-
-# Executar teste simples de inferência do YOLO
-.\.venv\Scripts\python.exe yolo_inference.py
+.\.venv\Scripts\python.exe app/app_main.py
 ```
-&gt; **Dica sobre o Cache (`stubs/`):** Se você trocar o vídeo em `main.py` ou alterar o modelo/confiança em `ball_tracker.py`, apague o arquivo `stubs/ball_detections.pkl` (ou passe `read_stub=False`) para forçar uma nova detecção pelo YOLO.
+* Abre automaticamente o navegador em `http://127.0.0.1:8000`.
 
+### 3.2. Rodar Apenas o Processamento de Vídeo em Lote (CLI)
+```powershell
+.\.venv\Scripts\python.exe main.py
+```
+* Processa o vídeo definido em `main.py` e salva sequencialmente em `runs/Ball_Tracker/out_video_N.mp4`.

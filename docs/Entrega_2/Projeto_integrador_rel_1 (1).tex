@@ -1,0 +1,652 @@
+\documentclass[a4paper,11pt]{article}
+
+% ============================================================
+%  TOP TRAINING - Proposta de reformulacao do projeto
+%  Baseado no main.tex da Entrega 1 (Robo Coletor de Bolas)
+% ============================================================
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{xcolor,colortbl}
+\usepackage{hyperref}
+\usepackage[left=2cm,right=1.5cm,bottom=1.5cm,top=2.5cm,foot=0.7cm]{geometry}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\DeclareUnicodeCharacter{2212}{-}
+
+% --- PALETA ---
+\definecolor{primary}{RGB}{31, 78, 121}
+\definecolor{rowgray}{RGB}{247, 249, 252}
+\definecolor{ganttblue}{RGB}{68, 114, 196}
+\definecolor{ganttorange}{RGB}{237, 125, 49}
+\definecolor{ganttgreen}{RGB}{112, 173, 71}
+\definecolor{ganttpurple}{RGB}{142, 68, 173}
+\definecolor{quadrabg}{HTML}{4A90C4}
+\definecolor{quadrapiso}{HTML}{2C5F8A}
+\definecolor{acerto}{HTML}{00B35F}
+\definecolor{erro}{HTML}{E03030}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{DAS5142}
+\rhead{Projeto Integrador -- Top Training}
+\rfoot{\thepage}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary, citecolor=primary}
+
+% ============================================================
+%  MACROS TikZ -- DIAGRAMAS DE SEQUENCIA (colunas / linhas de vida)
+% ============================================================
+\tikzset{
+  seqbox/.style={draw, rectangle, rounded corners=3pt, fill=blue!12,
+                 align=center, font=\scriptsize\bfseries, minimum height=0.8cm,
+                 minimum width=2.4cm, text width=2.4cm, inner sep=2pt},
+  uc/.style={draw, ellipse, fill=blue!7, align=center, font=\scriptsize,
+             minimum width=3.9cm, minimum height=1.0cm, inner sep=1pt},
+  ucx/.style={draw, ellipse, fill=gray!10, align=center, font=\scriptsize,
+              minimum width=3.9cm, minimum height=1.0cm, inner sep=1pt},
+  bloco/.style={draw, rectangle, rounded corners=3pt, fill=blue!8, align=center,
+                font=\scriptsize, minimum height=1.0cm, text width=2.9cm, inner sep=3pt},
+  blocoverde/.style={bloco, fill=green!14},
+  blocolaranja/.style={bloco, fill=orange!18},
+  linha/.style={draw, -{Latex}, thick, gray!70!black}
+}
+
+% \lifeline{x}{nome}{rotulo}{y_final}
+\newcommand{\lifeline}[4]{%
+  \node[seqbox] (#2) at (#1,0) {#3};
+  \draw[dashed, gray] (#1,-0.4) -- (#1,#4);}
+% \msg{x_origem}{x_destino}{y}{rotulo}  (chamada)
+\newcommand{\msg}[4]{%
+  \draw[-{Latex}, thick] (#1,#3) -- node[above, font=\scriptsize, align=center, inner sep=2pt]{#4} (#2,#3);}
+% \rmsg{...}  (retorno, tracejado)
+\newcommand{\rmsg}[4]{%
+  \draw[-{Latex}, thick, dashed] (#1,#3) -- node[above, font=\scriptsize, align=center, inner sep=2pt]{#4} (#2,#3);}
+% \selfmsg{x}{y}{rotulo}  (auto-chamada)
+\newcommand{\selfmsg}[3]{%
+  \draw[thick] (#1,#2) -- (#1+0.7,#2) -- (#1+0.7,#2-0.5);
+  \draw[-{Latex}, thick] (#1+0.7,#2-0.5) -- (#1,#2-0.5);
+  \node[right, font=\scriptsize, align=left, inner sep=2pt] at (#1+0.7,#2-0.25) {#3};}
+% \frag{x1}{x2}{y_topo}{y_base}{rotulo}  (loop / alt)
+\newcommand{\frag}[5]{%
+  \draw[thick, blue!60!black] (#1,#3) rectangle (#2,#4);
+  \node[anchor=north west, fill=blue!15, draw=blue!60!black, font=\scriptsize\bfseries, inner sep=2pt]
+        at (#1,#3) {#5};}
+% \sep{x1}{x2}{y}{rotulo}  (divisoria de alt)
+\newcommand{\fragsep}[4]{%
+  \draw[dashed, blue!60!black] (#1,#3) -- (#2,#3);
+  \node[anchor=north west, font=\scriptsize, inner sep=2pt] at (#1,#3) {#4};}
+
+% --- Ator de caso de uso: \ator{nome}{x}{y}{rotulo}
+\newcommand{\ator}[4]{%
+  \draw[thick] (#2,#3) circle (0.2);
+  \draw[thick] (#2,#3-0.2) -- (#2,#3-0.9);
+  \draw[thick] (#2-0.4,#3-0.5) -- (#2+0.4,#3-0.5);
+  \draw[thick] (#2,#3-0.9) -- (#2-0.3,#3-1.4);
+  \draw[thick] (#2,#3-0.9) -- (#2+0.3,#3-1.4);
+  \node[inner sep=0pt, minimum size=0.9cm] (#1) at (#2,#3-0.6) {};
+  \node[font=\scriptsize\bfseries, align=center, below] at (#2,#3-1.4) {#4};}
+
+% --- Linha de requisito: \req{ID}{texto}{prioridade}{verificacao}
+\newcommand{\req}[4]{#1 & #2 & \centering #3 & #4 \\ \hline}
+\newcommand{\reccat}[1]{\multicolumn{4}{l}{\cellcolor{blue!15}\textbf{#1}} \\ \hline}
+
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+  \IfFileExists{logoUFSCsimples.png}{\includegraphics[height=2cm]{logoUFSCsimples.png}\\}{}
+  {\Large Universidade Federal de Santa Catarina -- UFSC} \\
+  {\Large Centro Tecnológico -- CTC} \\
+  \vspace{1cm}
+  {\large DAS5142-07220B -- Projeto Integrador} \\
+  \vfill
+  {\Large\textbf{Top Training}} \\[0.3cm]
+  {\large\textbf{Treinamento Gamificado de Tênis por Visão Computacional}} \\[0.3cm]
+  \large{Proposta de Reformulação do Projeto -- Novo Objetivo e Requisitos} \\
+  \vspace{1cm}
+  \textbf{Professores:} \\ Leandro Buss Becker \\ Rodrigo Castelan Carlson
+  \vfill\vspace{1cm}
+  Integrantes: \\
+  Erik Lisboa de Almeida \\
+  Leonardo Sanches Conti \\
+  Lukas Martins Ristow
+  \vfill
+  Florianópolis, \today.
+\end{center}
+
+\clearpage
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Introdução}
+% ============================================================
+
+\subsection{Contexto e Motivação}
+O projeto \textit{Robô Coletor de Bolas}, desenvolvido em parceria com a \textbf{Drillbot}, foi concebido para recolher automaticamente as bolas espalhadas pela quadra após o treino. Durante a Entrega 1, o grupo auditou e reproduziu em laboratório toda a cadeia herdada: captura de vídeo, retificação por homografia, detecção de bolas com YOLO, rastreamento do robô e comunicação UDP com o ESP32.
+
+Dessa auditoria, o ativo de maior valor e menor risco foi a \textbf{cadeia de visão computacional}: o modelo YOLO já calibrado (\texttt{balls\_best.pt}) detecta bolas paradas com precisão de 97,9\%, recall de 95,1\% e mAP50 de 97,6\%. Já a parte mecânica e de controle do robô apresenta alto custo de desenvolvimento e depende de hardware que foge ao escopo de uma disciplina de um semestre.
+
+\subsection{Mudança de Escopo}
+Diante disso, o grupo decidiu \textbf{deixar o robô de lado} e concentrar o esforço em \textbf{identificação de imagens}, aproveitando o que já funciona (YOLO, homografia, câmera de celular via Iriun) para um produto novo, inspirado em sistemas comerciais de \textit{analytics} de tênis como o SwingVision: o \textbf{Top Training}.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\caption{Comparação entre o escopo anterior e o novo escopo.}
+\label{tab:escopo}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3.2cm} X X}
+\toprule
+ & \textbf{Robô Coletor de Bolas (anterior)} & \textbf{Top Training (novo)} \\
+\midrule
+Objetivo & Recolher bolas com robô móvel & Identificar onde a bola quica e pontuar o jogador \\
+\rowcolor{rowgray}
+Câmera & Superior, quadra inteira & Vertical, do lado oposto ao jogador, \textbf{meia quadra oposta} \\
+Saída & Rota e comandos $(v,\omega)$ via UDP & Ponto de quique no mapa e placar do treino \\
+\rowcolor{rowgray}
+Interface & Scripts e janelas OpenCV & \textbf{Dear PyGui}, tema escuro, padrão comercial \\
+Hardware & ESP32, motores, IMU & Apenas celular (Iriun) e computador \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Objetivo Geral}
+Desenvolver um sistema de \textbf{treino gamificado de tênis} que, a partir do vídeo de um celular, mapeie a meia quadra oposta ao jogador, identifique bolas em movimento, detecte o ponto em que cada bola quica no chão e compare esse ponto com uma \textbf{zona-foco} previamente escolhida, atribuindo ou descontando pontos.
+
+\subsection{Objetivos Específicos}
+\begin{enumerate}[label=\textbf{OE\arabic*.}]
+  \item \textbf{Mapear a quadra} de forma rápida e eficiente, com interface gráfica moderna, permitindo editar as dimensões e a posição de cada ponto na própria interface, sem uso de terminal.
+  \item \textbf{Definir a comunicação com a câmera} (Iriun e alternativas) com baixa latência e boa taxa de quadros.
+  \item \textbf{Treinar o modelo YOLO para bolas em movimento}, partindo do modelo já calibrado e melhorando-o com um novo \textit{dataset} contendo \textit{motion blur}.
+  \item \textbf{Validar a homografia} (erro de reprojeção e erro métrico).
+  \item \textbf{Validar a identificação de bolas paradas} na quadra, representadas como pontos no aplicativo.
+  \item \textbf{Detectar o quique} e estimar sua posição em metros no plano da quadra.
+  \item \textbf{Gamificar o treino}: perfis, níveis de dificuldade, zonas-foco, pontuação e ranking.
+\end{enumerate}
+
+% ============================================================
+\section{Solução Proposta}
+% ============================================================
+
+\subsection{Cenário de Uso}
+O celular é posicionado do \textbf{lado oposto ao jogador}, com a quadra em orientação \textbf{vertical} na imagem. O foco da análise é a \textbf{meia quadra do lado da rede oposto ao jogador}, onde as bolas devem quicar. Somente essa metade é mapeada (largura $\times$ profundidade: $10{,}97 \times 11{,}885$~m em duplas ou $8{,}23 \times 11{,}885$~m em simples; valores editáveis na interface). O sistema de coordenadas tem origem $(0,0)$ no canto inferior esquerdo (linha de fundo), com o eixo $y$ crescendo em direção à rede.
+
+\subsection{Arquitetura Geral}
+A Figura~\ref{fig:arq} apresenta os módulos do sistema e o fluxo de dados entre eles.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=0.9cm and 0.9cm]
+  \node[bloco] (fonte) {\textbf{Fonte de vídeo}\\Iriun / UVC / IP / arquivo};
+  \node[bloco, right=of fonte] (yolo) {\textbf{Detector YOLO}\\bolas em movimento e paradas};
+  \node[bloco, right=of yolo] (track) {\textbf{Rastreador}\\Kalman + trajetória};
+  \node[bloco, right=of track] (quique) {\textbf{Detector de quique}\\inversão vertical de $v$};
+
+  \node[blocolaranja, below=1.4cm of fonte] (calib) {\textbf{Calibração}\\4 pontos + dimensões};
+  \node[blocolaranja, below=1.4cm of yolo] (homog) {\textbf{Homografia $H$}\\pixel $\rightarrow$ metro};
+  \node[blocoverde, below=1.4cm of track] (jogo) {\textbf{Motor de jogo}\\zonas, pontos, níveis};
+  \node[blocoverde, below=1.4cm of quique] (ui) {\textbf{Interface Dear PyGui}\\mapa, menu, placar};
+
+  \node[bloco, fill=gray!15, below=1.2cm of jogo] (dados) {\textbf{Armazenamento}\\perfis, ranking, calibração (JSON)};
+
+  \draw[linha] (fonte) -- (yolo);
+  \draw[linha] (yolo) -- (track);
+  \draw[linha] (track) -- (quique);
+  \draw[linha] (calib) -- (homog);
+  \draw[linha] (fonte) -- (calib);
+  \draw[linha] (quique) -- node[right, font=\tiny]{$(u,v)$} (ui.north);
+  \draw[linha] (homog) -- node[above, font=\tiny]{$H$} (jogo);
+  \draw[linha] (quique.south west) -- node[above, font=\tiny, sloped]{quique} (jogo.north east);
+  \draw[linha] (jogo) -- node[above, font=\tiny]{acerto/erro} (ui);
+  \draw[linha, <->] (jogo) -- (dados);
+  \draw[linha] (fonte.north) -- ++(0,1.0) coordinate (topo) -- ($(topo -| quique.east)+(0.8,0)$) |- node[above, pos=0.15, font=\tiny]{vídeo ao vivo} (ui.east);
+\end{tikzpicture}}
+\caption{Arquitetura modular do Top Training.}
+\label{fig:arq}
+\end{figure}
+
+\subsection{Níveis de Dificuldade e Zonas-Foco}
+Com a quadra mapeada, o jogador escolhe um nível. Cada nível divide a meia quadra em um número diferente de zonas; antes do treino, escolhe-se a \textbf{zona-foco}.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\caption{Níveis de dificuldade e divisão da meia quadra.}
+\label{tab:niveis}
+\begin{tabularx}{\textwidth}{l c X}
+\toprule
+\textbf{Nível} & \textbf{Zonas} & \textbf{Divisão} \\
+\midrule
+Básico & 2 & Quadra dividida ao meio (esquerda / direita). \\
+\rowcolor{rowgray}
+Médio & 3 & Três zonas (suposição: três colunas -- a confirmar). \\
+Avançado & $\geq 6$ & Matriz de zonas (por exemplo $3\times 2$ ou $3\times 3$), número configurável. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Regra de pontuação (valores padrão, ajustáveis):} quique na zona-foco $\Rightarrow$ \textbf{acerto}, soma pontos (+10); quique fora da zona-foco ou fora da quadra $\Rightarrow$ \textbf{erro}, subtrai pontos ($-5$, mínimo zero). O sistema mantém contadores de acertos e erros e a precisão da sessão.
+
+\subsection{Telas do Aplicativo}
+O fluxo de telas é: (1)~\textbf{Perfil e nível} -- o programa pede um nome e o nível; (2)~\textbf{Calibração} -- se ainda não houver quadra calibrada; (3)~\textbf{Escolha da zona-foco} -- mapa vertical no centro, somente a meia quadra oposta em destaque e o restante opaco e translúcido; ao passar o mouse sobre uma zona ela é realçada, e o clique a confirma; (4)~\textbf{Treino}; (5)~\textbf{Resumo da sessão}; (6)~\textbf{Ranking}.
+
+A tela de treino (Figura~\ref{fig:tela}) tem a quadra ao centro, um menu à esquerda (sair, trocar dificuldade, trocar perfil) e o placar à direita (pontos, acertos, erros).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.95]
+  % janela
+  \draw[thick, fill=gray!85!black] (0,0) rectangle (13,8);
+  % menu esquerdo
+  \draw[fill=gray!70!black, draw=gray!40] (0.2,0.2) rectangle (2.8,7.8);
+  \node[white, font=\scriptsize\bfseries] at (1.5,7.3) {MENU};
+  \foreach \idx/\lbl in {1/Sair do treino, 2/Trocar dificuldade, 3/Trocar perfil}{
+    \node[draw=white, rounded corners=2pt, fill=gray!40!black, text=white, font=\tiny, minimum width=2.1cm, minimum height=0.6cm] at (1.5,{7.5-0.9*\idx}) {\lbl};}
+  % placar direito
+  \draw[fill=gray!70!black, draw=gray!40] (10.2,0.2) rectangle (12.8,7.8);
+  \node[white, font=\scriptsize\bfseries] at (11.5,7.3) {PLACAR};
+  \node[white, font=\tiny, align=left] at (11.5,5.4) {Pontos: \textbf{120}\\[3pt]Acertos: \textcolor{green!70!white}{\textbf{14}}\\[3pt]Erros: \textcolor{red!60!white}{\textbf{5}}\\[3pt]Precisão: \textbf{73,7\%}};
+  % quadra (vertical)
+  \fill[quadrabg] (3.1,0.2) rectangle (9.9,7.8);
+  \fill[quadrapiso] (4.2,0.7) rectangle (8.8,7.2);
+  \draw[white, thick] (4.2,0.7) rectangle (8.8,7.2);           % contorno
+  \draw[white, ultra thick] (4.2,7.2) -- (8.8,7.2);            % rede
+  \draw[white, thick] (4.2,3.9) -- (8.8,3.9);                  % linha de saque
+  \draw[white, thick] (6.5,3.9) -- (6.5,7.2);                  % divisoria saque
+  % zona foco (nivel basico: metade direita)
+  \fill[acerto, opacity=0.35] (6.5,0.7) rectangle (8.8,7.2);
+  \draw[white, dashed] (6.5,0.7) -- (6.5,3.9);
+  % quiques
+  \foreach \qx/\qy/\qc in {7.4/2.0/acerto, 7.9/5.0/acerto, 5.2/3.1/erro, 5.7/5.9/erro, 8.2/1.4/acerto}{
+    \fill[\qc] (\qx,\qy) circle (0.14); \draw[white] (\qx,\qy) circle (0.14);}
+  \node[white, font=\tiny, rotate=90] at (9.5,4) {Meia quadra oposta (vertical)};
+  \node[white, font=\tiny] at (6.5,7.5) {REDE};
+\end{tikzpicture}
+\caption{Esboço da tela de treino: menu à esquerda, mapa da quadra ao centro e placar à direita. Zona-foco em verde; quiques verdes (acerto) e vermelhos (erro).}
+\label{fig:tela}
+\end{figure}
+
+\subsection{Perfis e Ranking}
+Ao digitar um nome, o perfil é criado e salvo em arquivo JSON; ao digitar o mesmo nome em outra sessão, o histórico é recuperado. Uma tela de \textbf{ranking} compara os resultados dos perfis (pontos, acertos, erros, precisão e data), separados por nível de dificuldade.
+
+\subsection{Tecnologias}
+\begin{itemize}
+  \item \textbf{Interface:} Dear PyGui (licença MIT, renderização acelerada por GPU); o mapa é desenhado em \textit{drawlist} e o vídeo da câmera como textura dinâmica.
+  \item \textbf{Visão:} Ultralytics YOLO (modelo base \texttt{treino\_bolas\_v24}), OpenCV (homografia) e filtro de Kalman.
+  \item \textbf{Câmera:} celular via \textbf{Iriun Webcam} (USB ou Wi-Fi), com camada de abstração que aceita também câmera UVC, fluxo IP/RTSP e arquivo de vídeo.
+  \item \textbf{Dados:} arquivos JSON locais (perfis, ranking, calibração).
+\end{itemize}
+
+% ============================================================
+\section{Diagrama de Casos de Uso}
+% ============================================================
+A Figura~\ref{fig:uc} apresenta os casos de uso. O \textbf{Jogador} é o ator principal; a \textbf{Câmera (Iriun)} é um ator secundário (sistema externo) que fornece os quadros; o \textbf{Desenvolvedor} executa as validações técnicas.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}
+  % fronteira do sistema
+  \draw[thick, rounded corners=6pt, fill=gray!4] (2.6,1.0) rectangle (13.2,-14.0);
+  \node[font=\small\bfseries, anchor=north] at (7.9,0.9) {Sistema Top Training};
+
+  % atores
+  \ator{jog}{0}{-5.2}{Jogador}
+  \ator{cam}{15.8}{-5.0}{Câmera\\(Iriun)}
+  \ator{dev}{0}{-11.6}{Desenvolvedor}
+
+  % casos de uso -- coluna esquerda
+  \node[uc] (u1) at (5.4,-0.4) {UC01\\Criar / selecionar perfil};
+  \node[uc] (u2) at (5.4,-2.0) {UC02\\Escolher nível de dificuldade};
+  \node[uc] (u3) at (5.4,-3.6) {UC03\\Calibrar a quadra};
+  \node[uc] (u4) at (5.4,-5.2) {UC04\\Selecionar zona-foco};
+  \node[uc] (u5) at (5.4,-6.8) {UC05\\Realizar treino};
+  \node[uc] (u6) at (5.4,-8.4) {UC06\\Consultar placar e resumo};
+  \node[uc] (u7) at (5.4,-10.0) {UC07\\Consultar ranking};
+  \node[uc] (u8) at (5.4,-11.6) {UC08\\Trocar perfil / dificuldade};
+  \node[uc] (u9) at (5.4,-13.2) {UC09\\Validar homografia e detecção};
+
+  % coluna direita (inclusoes)
+  \node[ucx] (i1) at (10.6,-2.0) {UC10\\Obter imagem base\\(foto ou câmera)};
+  \node[ucx] (i2) at (10.6,-3.6) {UC11\\Marcar e ajustar 4 pontos\\e dimensões};
+  \node[ucx] (i3) at (10.6,-5.2) {UC12\\Calcular homografia $H$};
+  \node[ucx] (i4) at (10.6,-6.8) {UC13\\Detectar bola e quique};
+  \node[ucx] (i5) at (10.6,-8.4) {UC14\\Atualizar pontuação\\e mapa};
+  \node[ucx] (i6) at (10.6,-10.0) {UC15\\Salvar sessão e\\atualizar ranking};
+
+  % associacoes do jogador
+  \foreach \caso in {u1,u2,u3,u4,u5,u6,u7,u8}{\draw[thick] (jog.east) -- (\caso.west);}
+  \draw[thick] (dev.east) -- (u9.west);
+  \draw[thick] (cam.west) -- (i1.east);
+  \draw[thick] (cam.west) -- (i4.east);
+
+  % includes
+  \draw[-{Latex}, dashed] (u3) -- node[above, font=\tiny]{\guillemotleft include\guillemotright} (i1);
+  \draw[-{Latex}, dashed] (u3.north east) -- (i2.west);
+  \draw[-{Latex}, dashed] (u3.south east) -- (i3.west);
+  \draw[-{Latex}, dashed] (u5) -- node[above, font=\tiny]{\guillemotleft include\guillemotright} (i4);
+  \draw[-{Latex}, dashed] (u5.south east) -- (i5.west);
+  \draw[-{Latex}, dashed] (u6.south east) -- (i6.west);
+  \draw[-{Latex}, dashed] (u5.north) -- node[left, font=\tiny]{\guillemotleft include\guillemotright} (u4.south);
+  \draw[-{Latex}, dashed] (u9.north east) .. controls (8.5,-12.0) and (8.5,-6.0) .. (i3.south west);
+\end{tikzpicture}}
+\caption{Diagrama de casos de uso do Top Training.}
+\label{fig:uc}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.2}
+\caption{Descrição resumida dos principais casos de uso.}
+\label{tab:uc}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{ID} & \textbf{Caso de uso} & \textbf{Descrição} \\
+\midrule
+UC01 & Criar / selecionar perfil & O jogador informa um nome; se existir, o perfil é carregado, senão é criado. \\
+\rowcolor{rowgray}
+UC02 & Escolher nível & Básico (2 zonas), Médio (3) ou Avançado (matriz); define a grade de zonas. \\
+UC03 & Calibrar a quadra & Obtém a imagem (foto ou câmera), marca/ajusta 4 pontos, edita dimensões e calcula $H$. \\
+\rowcolor{rowgray}
+UC04 & Selecionar zona-foco & Mapa vertical com zonas realçadas ao passar o mouse; clique confirma. \\
+UC05 & Realizar treino & Detecta bolas e quiques em tempo real e marca-os no mapa, pontuando acertos e erros. \\
+\rowcolor{rowgray}
+UC06 & Consultar placar / resumo & Exibe pontos, acertos, erros, precisão e mapa de quiques da sessão. \\
+UC07 & Consultar ranking & Compara resultados entre perfis por nível. \\
+\rowcolor{rowgray}
+UC08 & Trocar perfil / dificuldade & Disponível no menu esquerdo durante o treino. \\
+UC09 & Validar homografia e detecção & Mede erro de reprojeção, erro métrico, bolas paradas e quiques rotulados. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Diagramas de Sequência}
+% ============================================================
+Os diagramas a seguir mostram, em colunas (linhas de vida), a troca de mensagens entre o usuário e os módulos do sistema ao longo do tempo. Setas cheias representam chamadas e setas tracejadas representam retornos.
+
+\subsection{Início da Sessão: Perfil, Nível e Zona-Foco}
+\begin{figure}[H]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}
+  \lifeline{0}{j}{Jogador}{-14.0}
+  \lifeline{4.2}{ui}{Interface\\Dear PyGui}{-14.0}
+  \lifeline{8.4}{gp}{Gerenciador\\de perfis}{-14.0}
+  \lifeline{12.6}{ar}{Armazenamento\\(JSON)}{-14.0}
+
+  \msg{0}{4.2}{-1.4}{informa nome e nível}
+  \msg{4.2}{8.4}{-2.6}{buscarOuCriarPerfil(nome)}
+  \msg{8.4}{12.6}{-3.8}{ler perfis/nome.json}
+  \rmsg{12.6}{8.4}{-5.0}{perfil existente\\ou vazio}
+  \rmsg{8.4}{4.2}{-6.2}{perfil carregado}
+  \msg{4.2}{0}{-7.4}{exibe grade de zonas\\(depende do nível)}
+  \msg{0}{4.2}{-8.8}{move o mouse sobre as zonas}
+  \selfmsg{4.2}{-9.4}{realça a zona\\sob o cursor}
+  \msg{0}{4.2}{-11.0}{clica: confirma zona-foco}
+  \msg{4.2}{8.4}{-12.0}{salvarConfiguração(nível, zona)}
+  \msg{4.2}{0}{-13.2}{abre a tela de treino}
+\end{tikzpicture}}
+\caption{Diagrama de sequência: início da sessão.}
+\label{fig:seq1}
+\end{figure}
+
+\subsection{Calibração da Quadra}
+\begin{figure}[H]
+\centering
+\resizebox{!}{21cm}{%
+\begin{tikzpicture}
+  \lifeline{0}{j}{Jogador}{-24.5}
+  \lifeline{3.8}{ui}{Interface\\Dear PyGui}{-24.5}
+  \lifeline{7.6}{cam}{Fonte de vídeo\\(Iriun)}{-24.5}
+  \lifeline{11.4}{hom}{Módulo de\\homografia}{-24.5}
+  \lifeline{15.2}{ar}{Armazenamento\\(JSON / fotos)}{-24.5}
+
+  \msg{0}{3.8}{-1.4}{escolhe a fonte\\(foto ou câmera)}
+
+  \frag{-0.8}{16.2}{-2.2}{-8.6}{alt}
+  \node[font=\scriptsize, anchor=north west] at (0.9,-2.35) {[câmera ao vivo]};
+  \msg{3.8}{7.6}{-3.6}{abrir(índices 0, 1, 2)}
+  \rmsg{7.6}{3.8}{-4.6}{quadros de vídeo}
+  \msg{3.8}{0}{-5.6}{pré-visualização ao vivo}
+  \msg{0}{3.8}{-6.6}{pressiona C: congela o quadro}
+  \fragsep{-0.8}{16.2}{-7.1}{[foto salva]}
+  \msg{3.8}{15.2}{-7.9}{carregar imagem}
+  \rmsg{15.2}{3.8}{-8.4}{imagem}
+
+  \msg{0}{3.8}{-9.8}{clica nos 4 cantos da quadra}
+  \selfmsg{3.8}{-10.3}{desenha o plano\\(polígono) em tempo real}
+
+  \frag{-0.8}{16.2}{-12.0}{-15.6}{loop [ajuste fino]}
+  \msg{0}{3.8}{-13.4}{arrasta ponto ou edita\\X, Y e dimensões}
+  \selfmsg{3.8}{-14.0}{atualiza o plano e\\as coordenadas}
+
+  \msg{0}{3.8}{-16.8}{confirma (ENTER)}
+  \msg{3.8}{11.4}{-18.0}{calcularH(pixels, metros)}
+  \rmsg{11.4}{3.8}{-19.2}{$H$ e erro de reprojeção}
+  \msg{3.8}{15.2}{-20.4}{salvar homografia.json}
+  \rmsg{15.2}{3.8}{-21.6}{ok}
+  \msg{3.8}{0}{-23.0}{exibe o mapa vertical retificado}
+\end{tikzpicture}}
+\caption{Diagrama de sequência: calibração da quadra.}
+\label{fig:seq2}
+\end{figure}
+
+\subsection{Treino: Detecção do Quique e Pontuação}
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}
+  \lifeline{0}{j}{Jogador}{-17.4}
+  \lifeline{3.4}{cam}{Câmera\\(Iriun)}{-17.4}
+  \lifeline{6.8}{yo}{Detector\\YOLO}{-17.4}
+  \lifeline{10.2}{rq}{Rastreador e\\detector de quique}{-17.4}
+  \lifeline{13.6}{jg}{Motor\\de jogo}{-17.4}
+  \lifeline{17.0}{ui}{Interface\\Dear PyGui}{-17.4}
+
+  \selfmsg{0}{-1.2}{rebate a bola}
+
+  \frag{2.4}{18.2}{-2.4}{-12.0}{loop [treino ativo]}
+  \msg{3.4}{6.8}{-3.6}{quadro de vídeo}
+  \msg{6.8}{10.2}{-4.6}{bolas $(u,v)$ e confiança}
+  \selfmsg{10.2}{-5.2}{Kalman: suaviza e\\prevê a trajetória}
+
+  \frag{9.2}{18.0}{-6.6}{-11.6}{alt [quique detectado]}
+  \selfmsg{10.2}{-7.7}{inversão do sinal\\de $v$ vertical}
+  \msg{10.2}{13.6}{-9.2}{pontoQuique$(x,y)=H\cdot(u,v)$}
+  \selfmsg{13.6}{-9.5}{classifica: dentro/fora\\e zona-foco}
+  \msg{13.6}{17.0}{-11.0}{acerto/erro e pontos}
+
+  \rmsg{17.0}{0}{-13.0}{marcador no mapa e placar atualizado}
+  \msg{0}{17.0}{-14.0}{encerra treino (menu)}
+  \msg{17.0}{13.6}{-15.0}{salvarSessão()}
+  \rmsg{13.6}{17.0}{-16.0}{perfil e ranking atualizados}
+  \msg{17.0}{0}{-17.0}{resumo da sessão e ranking}
+\end{tikzpicture}}
+\caption{Diagrama de sequência: treino com detecção do quique.}
+\label{fig:seq3}
+\end{figure}
+
+% ============================================================
+\section{Requisitos}
+% ============================================================
+A Tabela~\ref{tab:req} lista os requisitos funcionais (RF) e não funcionais (RNF). \textbf{Prioridade:} M = obrigatório (\textit{Must}); S = desejável (\textit{Should}); C = opcional (\textit{Could}). Os requisitos marcados com $^{\star}$ foram \textbf{acrescentados} nesta revisão, além dos citados na proposta original.
+
+\begin{center}
+\scriptsize
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{|p{1.3cm}|p{7.3cm}|p{0.9cm}|p{6.0cm}|}
+\caption{Requisitos do Top Training.}\label{tab:req}\\
+\hline
+\rowcolor{primary}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Requisito}} & \textcolor{white}{\textbf{Pri.}} & \textcolor{white}{\textbf{Verificação}} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{primary}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Requisito}} & \textcolor{white}{\textbf{Pri.}} & \textcolor{white}{\textbf{Verificação}} \\ \hline
+\endhead
+\hline \multicolumn{4}{r}{\tiny continua na próxima página} \\
+\endfoot
+\hline
+\endlastfoot
+
+\reccat{A. Mapeamento da quadra (formato e layout da interface)}
+\req{RF01}{Escolher a fonte da calibração: foto salva ou câmera ao vivo (Iriun).}{M}{Teste manual com as duas fontes.}
+\req{RF02}{Marcar os 4 cantos da meia quadra por clique, gerando um plano que liga os pontos em tempo real.}{M}{Inspeção visual.}
+\req{RF03}{Arrastar os pontos para ajuste fino (raio de captura de cerca de 20 px).}{M}{Teste manual.}
+\req{RF04}{Editar dimensões e coordenadas de cada ponto \textbf{na própria interface}, sem terminal.}{M}{Teste manual.}
+\req{RF05}{Calcular a homografia e exibir o mapa vertical retificado, somente com as linhas.}{M}{Comparação com as medidas oficiais.}
+\req{RF06$^{\star}$}{Salvar e carregar a calibração, reutilizando-a entre sessões.}{S}{Reabrir o aplicativo e conferir.}
+\req{RF07$^{\star}$}{Alternar entre quadra de simples (8,23 m) e de duplas (10,97 m).}{S}{Teste manual.}
+
+\reccat{B. Câmera e comunicação}
+\req{RF08}{Abstração da fonte de vídeo (Iriun, UVC, IP/RTSP e arquivo de vídeo).}{M}{Trocar de fonte sem alterar o restante do código.}
+\req{RF09$^{\star}$}{Detectar automaticamente o índice da câmera e reconectar após queda.}{S}{Desconectar e reconectar durante a execução.}
+\req{RF10$^{\star}$}{Reproduzir vídeo gravado como se fosse câmera (testes sem hardware).}{S}{Executar os vídeos de teste.}
+\req{RF11$^{\star}$}{Exibir FPS e latência na interface (modo depuração).}{C}{Leitura na tela.}
+
+\reccat{C. Visão computacional}
+\req{RF12}{Detectar bolas \textbf{em movimento} com YOLO retreinado em \textit{dataset} com \textit{motion blur}.}{M}{mAP50 e recall no conjunto de validação.}
+\req{RF13$^{\star}$}{Rastrear a trajetória (Kalman e associação), mantendo as últimas $N$ posições.}{M}{Trajetória contínua em vídeo.}
+\req{RF14$^{\star}$}{Detectar o \textbf{quique} (inversão do movimento vertical) e estimar o ponto de contato em metros.}{M}{Comparação com vídeos rotulados à mão.}
+\req{RF15$^{\star}$}{Classificar o quique: dentro/fora da quadra e dentro/fora da zona-foco.}{M}{Matriz de confusão.}
+\req{RF16}{Exibir bolas \textbf{paradas} na quadra como ponto no mapa.}{S}{Bolas em posições conhecidas.}
+\req{RF17$^{\star}$}{Filtrar falsos positivos (região da quadra, confiança e tamanho).}{S}{Taxa de falsos positivos em vídeo.}
+
+\reccat{D. Treino gamificado e aplicação}
+\req{RF18}{Perfis por nome, persistidos em JSON; o mesmo nome recupera o histórico.}{M}{Fechar e reabrir o aplicativo.}
+\req{RF19}{Níveis Básico (2 zonas), Médio (3 zonas) e Avançado (matriz de zonas).}{M}{Teste unitário da divisão em zonas.}
+\req{RF20}{Tela de seleção da zona-foco com realce ao passar o mouse; restante da quadra opaco e translúcido.}{M}{Inspeção visual.}
+\req{RF21}{Pontuação: acerto soma e erro subtrai pontos; contadores de acertos e erros.}{M}{Teste unitário.}
+\req{RF22}{Tela de treino: quadra ao centro, menu à esquerda (sair, trocar dificuldade, trocar perfil) e placar à direita.}{M}{Inspeção visual.}
+\req{RF23}{Marcadores de quique no mapa (verde = acerto, vermelho = erro).}{M}{Simulação de quiques.}
+\req{RF24}{Tela de ranking comparando perfis por nível.}{M}{Teste com perfis fictícios.}
+\req{RF25$^{\star}$}{Resumo da sessão (precisão e mapa de calor dos quiques).}{S}{Inspeção visual.}
+\req{RF26$^{\star}$}{Histórico e evolução por perfil.}{C}{Gráfico por sessão.}
+\req{RF27$^{\star}$}{Feedback sonoro e visual de acerto e erro.}{C}{Teste manual.}
+
+\reccat{E. Requisitos não funcionais}
+\req{RNF01}{Interface com \textbf{Dear PyGui}, tema escuro e aparência de produto comercial.}{M}{Revisão de design.}
+\req{RNF02}{Pipeline com pelo menos 30 FPS com GPU (15 FPS em CPU); captura preferencialmente a 60 FPS.}{S}{Medição de FPS.}
+\req{RNF03}{Latência do quique até o marcador de no máximo 500 ms.}{S}{Cronometragem com vídeo.}
+\req{RNF04}{Homografia com erro de reprojeção de no máximo 5 px e erro métrico de no máximo 15 cm em pontos de teste.}{M}{Validação com marcações conhecidas.}
+\req{RNF05}{Bolas paradas: erro de posição de no máximo 15 cm e recall de pelo menos 95\%.}{M}{Bolas em posições medidas.}
+\req{RNF06}{Bolas em movimento: mAP50 de pelo menos 0,90 e recall de pelo menos 0,85 no conjunto com \textit{blur}.}{M}{Validação do modelo (\texttt{model.val()}).}
+\req{RNF07}{Classificação do quique por zona com acerto de pelo menos 90\%.}{M}{Vídeos rotulados.}
+\req{RNF08}{Execução offline em Windows 10/11.}{M}{Teste sem internet.}
+\req{RNF09}{Licenças compatíveis com comercialização (atenção à AGPL do Ultralytics).}{S}{Auditoria de licenças.}
+\req{RNF10}{Uso por leigos: calibrar em poucos passos (até 2 min).}{S}{Teste de usabilidade.}
+\req{RNF11}{Dados em JSON legível.}{S}{Inspeção.}
+\req{RNF12$^{\star}$}{Testes automatizados (\texttt{pytest}) de homografia, zonas, pontuação e detecção de quique.}{S}{Execução local dos testes.}
+\end{longtable}
+\end{center}
+
+% ============================================================
+\section{Plano de Validação}
+% ============================================================
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\caption{Validações previstas.}
+\label{tab:validacao}
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+\textbf{Validação} & \textbf{Procedimento} & \textbf{Métrica / critério} \\
+\midrule
+Homografia & Marcar interseções de linhas conhecidas e comparar as coordenadas calculadas com as oficiais. & Erro de reprojeção (px) $\leq 5$; erro métrico $\leq 15$~cm. \\
+\rowcolor{rowgray}
+Bolas paradas & Posicionar bolas em coordenadas medidas e conferir o ponto no mapa. & Erro de posição $\leq 15$~cm; recall $\geq 95\%$. \\
+Bolas em movimento & Avaliar o YOLO retreinado em vídeos com \textit{blur}. & mAP50 $\geq 0{,}90$; recall $\geq 0{,}85$. \\
+\rowcolor{rowgray}
+Quique & Comparar eventos detectados com quiques rotulados manualmente em vídeo. & Acerto na zona $\geq 90\%$; latência $\leq 500$~ms. \\
+Comunicação & Medir FPS e latência com Iriun (USB e Wi-Fi) e arquivo de vídeo. & FPS $\geq 30$; latência estável. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Comunicação com a Câmera}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\caption{Alternativas de comunicação câmera--computador.}
+\label{tab:camera}
+\begin{tabularx}{\textwidth}{l X X}
+\toprule
+\textbf{Opção} & \textbf{Vantagens} & \textbf{Pontos a validar} \\
+\midrule
+Iriun Webcam (atual) & Já usada no projeto anterior; USB ou Wi-Fi; aparece como webcam. & Dependência de aplicativo de terceiros; limites da versão gratuita. \\
+\rowcolor{rowgray}
+Câmera USB (UVC) & Padrão nativo, sem \textit{driver} extra, licença limpa. & Menor flexibilidade de posicionamento. \\
+Fluxo IP / RTSP & Dispensa \textit{driver} no computador. & Latência maior; configuração de rede. \\
+\rowcolor{rowgray}
+Arquivo de vídeo & Reprodutível; ideal para testes. & Não é tempo real. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\section{Riscos}
+% ============================================================
+\begin{itemize}
+  \item \textbf{Licença:} o Ultralytics YOLO é distribuído sob AGPL-3.0; a comercialização exige licença \textit{Enterprise} ou um modelo alternativo de licença permissiva.
+  \item \textbf{Bolas borradas:} a bola em movimento aparece alongada; o recall do modelo atual tende a cair. Mitigação: novo \textit{dataset} e \textit{fine-tuning}.
+  \item \textbf{Taxa de quadros e exposição} do celular: 30 FPS e exposição longa agravam o \textit{blur}. Mitigação: 60 FPS e exposição curta.
+  \item \textbf{Oclusão} da bola por jogador ou rede.
+  \item \textbf{Paralaxe:} a homografia só vale para pontos no plano do chão; por isso o ponto estimado é o do instante do quique.
+\end{itemize}
+
+\textbf{Questões em aberto:} (i)~zonas do nível Médio (colunas ou faixas de profundidade); (ii)~valores de pontuação e penalidade para bola fora da quadra; (iii)~quadra de simples ou duplas como padrão; (iv)~ranking global ou por período.
+
+% ============================================================
+\section{Cronograma Atualizado}
+% ============================================================
+\begin{table}[H]
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{3pt}
+\caption{Proposta de cronograma para as semanas restantes (S8 a S17).}
+\label{tab:gantt}
+\begin{tabularx}{\textwidth}{X *{10}{c}}
+\toprule
+\textbf{Atividade} & \textbf{S8} & \textbf{S9} & \textbf{S10} & \textbf{S11} & \textbf{S12} & \textbf{S13} & \textbf{S14} & \textbf{S15} & \textbf{S16} & \textbf{S17} \\
+\midrule
+Reformulação do escopo, requisitos e documentação & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & & & & & & \\
+\rowcolor{rowgray}
+Interface Dear PyGui: telas e navegação & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & & & & \\
+Calibração na interface, homografia e validação & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & & & \\
+\rowcolor{rowgray}
+Camada de câmera (Iriun, UVC, arquivo) & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & & & & \\
+\textbf{Marco: Entrega 2 (apres. 19--21/10)} & & & & \cellcolor{ganttorange}\textbf{E2} & & & & & & \\
+\rowcolor{rowgray}
+\textit{Dataset} de bolas em movimento e \textit{fine-tuning} do YOLO & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & & \\
+Rastreamento e detecção de quique & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & \\
+\rowcolor{rowgray}
+Integração: quique $\rightarrow$ pontuação $\rightarrow$ ranking & & & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & \\
+Testes em quadra e validações & & & & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \\
+\rowcolor{rowgray}
+Relatório final e apresentação & & & & & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} \\
+\textbf{Marco: Entrega 3 (apres. 30/11--03/12)} & & & & & & & & & & \cellcolor{ganttgreen}\textbf{E3} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}

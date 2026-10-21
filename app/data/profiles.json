@@ -1,0 +1,529 @@
+{
+  "Lukas": {
+    "name": "Lukas",
+    "created_at": "2026-10-18 20:23",
+    "sessions": [
+      {
+        "date": "18/10/2026 20:26",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 0,
+        "total_shots": 0,
+        "accuracy": 0.0,
+        "events": []
+      },
+      {
+        "date": "18/10/2026 20:32",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 0,
+        "total_shots": 0,
+        "accuracy": 0.0,
+        "events": []
+      },
+      {
+        "date": "18/10/2026 20:35",
+        "level": "basico",
+        "target_zone": 0,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 1,
+        "total_shots": 1,
+        "accuracy": 0.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 117,
+            "time_sec": -117.0,
+            "pixel_u": 446.9,
+            "pixel_v": 378.3,
+            "x_m": 5.938,
+            "y_m": 8.792,
+            "zone_id": 1,
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 0
+          }
+        ]
+      },
+      {
+        "date": "18/10/2026 20:35",
+        "level": "basico",
+        "target_zone": 0,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 1,
+        "total_shots": 1,
+        "accuracy": 0.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 117,
+            "time_sec": -117.0,
+            "pixel_u": 446.9,
+            "pixel_v": 378.3,
+            "x_m": 5.938,
+            "y_m": 8.792,
+            "zone_id": 1,
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 0
+          }
+        ]
+      },
+      {
+        "date": "18/10/2026 20:40",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "camera:0",
+        "score": 10,
+        "hits": 1,
+        "misses": 0,
+        "total_shots": 1,
+        "accuracy": 100.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 352,
+            "time_sec": -352.0,
+            "pixel_u": 433.9,
+            "pixel_v": 329.6,
+            "x_m": 5.573,
+            "y_m": 6.229,
+            "zone_id": 1,
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          }
+        ]
+      },
+      {
+        "date": "18/10/2026 20:43",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 1,
+        "total_shots": 1,
+        "accuracy": 0.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 449,
+            "time_sec": -449.0,
+            "pixel_u": 330.0,
+            "pixel_v": 365.0,
+            "x_m": 3.722,
+            "y_m": 8.211,
+            "zone_id": 0,
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          }
+        ]
+      },
+      {
+        "date": "18/10/2026 21:35",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:quadra_3.MOV",
+        "score": 50,
+        "hits": 5,
+        "misses": 0,
+        "total_shots": 5,
+        "accuracy": 100.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 718,
+            "time_sec": 23.93,
+            "pixel_u": 1012.7,
+            "pixel_v": 568.0,
+            "x_m": 4.763,
+            "y_m": 1.2,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 814,
+            "time_sec": 27.13,
+            "pixel_u": 1195.2,
+            "pixel_v": 857.7,
+            "x_m": 5.249,
+            "y_m": 6.729,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 20
+          },
+          {
+            "shot_number": 3,
+            "frame": 845,
+            "time_sec": 28.16,
+            "pixel_u": 1568.3,
+            "pixel_v": 933.7,
+            "x_m": 6.387,
+            "y_m": 8.178,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 30
+          },
+          {
+            "shot_number": 4,
+            "frame": 880,
+            "time_sec": 29.33,
+            "pixel_u": 1003.5,
+            "pixel_v": 1033.8,
+            "x_m": 4.451,
+            "y_m": 10.09,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 40
+          },
+          {
+            "shot_number": 5,
+            "frame": 909,
+            "time_sec": 30.3,
+            "pixel_u": 1060.1,
+            "pixel_v": 1065.0,
+            "x_m": 4.608,
+            "y_m": 10.685,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 50
+          }
+        ]
+      },
+      {
+        "date": "18/10/2026 22:27",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_3.mp4",
+        "score": 10,
+        "hits": 1,
+        "misses": 3,
+        "total_shots": 4,
+        "accuracy": 25.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 10,
+            "time_sec": 0.33,
+            "pixel_u": 779.9,
+            "pixel_v": 767.9,
+            "x_m": 2.767,
+            "y_m": 2.468,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 2,
+            "frame": 46,
+            "time_sec": 1.53,
+            "pixel_u": 942.5,
+            "pixel_v": 321.7,
+            "x_m": 3.904,
+            "y_m": 11.435,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 3,
+            "frame": 94,
+            "time_sec": 3.13,
+            "pixel_u": 630.4,
+            "pixel_v": 796.1,
+            "x_m": 1.718,
+            "y_m": 1.644,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 4,
+            "frame": 181,
+            "time_sec": 6.03,
+            "pixel_u": 1291.1,
+            "pixel_v": 742.6,
+            "x_m": 6.56,
+            "y_m": 3.282,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          }
+        ]
+      },
+      {
+        "date": "19/10/2026 08:29",
+        "level": "medio",
+        "target_zone": 1,
+        "source": "video:quadra_2.MOV",
+        "score": 50,
+        "hits": 5,
+        "misses": 0,
+        "total_shots": 5,
+        "accuracy": 100.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 104,
+            "time_sec": 3.47,
+            "pixel_u": 1073.6,
+            "pixel_v": 784.3,
+            "x_m": 4.911,
+            "y_m": 2.031,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 142,
+            "time_sec": 4.73,
+            "pixel_u": 1092.5,
+            "pixel_v": 643.8,
+            "x_m": 5.149,
+            "y_m": 6.467,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 20
+          },
+          {
+            "shot_number": 3,
+            "frame": 171,
+            "time_sec": 5.7,
+            "pixel_u": 1075.9,
+            "pixel_v": 598.3,
+            "x_m": 5.049,
+            "y_m": 8.107,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 30
+          },
+          {
+            "shot_number": 4,
+            "frame": 272,
+            "time_sec": 9.07,
+            "pixel_u": 906.2,
+            "pixel_v": 766.6,
+            "x_m": 3.692,
+            "y_m": 2.522,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 40
+          },
+          {
+            "shot_number": 5,
+            "frame": 311,
+            "time_sec": 10.37,
+            "pixel_u": 971.2,
+            "pixel_v": 630.5,
+            "x_m": 4.178,
+            "y_m": 6.915,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 50
+          }
+        ]
+      },
+      {
+        "date": "19/10/2026 08:30",
+        "level": "medio",
+        "target_zone": 1,
+        "source": "video:quadra_2.MOV",
+        "score": 50,
+        "hits": 5,
+        "misses": 0,
+        "total_shots": 5,
+        "accuracy": 100.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 104,
+            "time_sec": 3.47,
+            "pixel_u": 1073.6,
+            "pixel_v": 784.3,
+            "x_m": 4.796,
+            "y_m": 10.631,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 142,
+            "time_sec": 4.73,
+            "pixel_u": 1092.5,
+            "pixel_v": 643.8,
+            "x_m": 5.197,
+            "y_m": 3.151,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 20
+          },
+          {
+            "shot_number": 3,
+            "frame": 171,
+            "time_sec": 5.7,
+            "pixel_u": 1075.9,
+            "pixel_v": 598.3,
+            "x_m": 5.241,
+            "y_m": 0.45,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 30
+          },
+          {
+            "shot_number": 4,
+            "frame": 272,
+            "time_sec": 9.07,
+            "pixel_u": 906.2,
+            "pixel_v": 766.6,
+            "x_m": 4.005,
+            "y_m": 9.869,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 40
+          },
+          {
+            "shot_number": 5,
+            "frame": 311,
+            "time_sec": 10.37,
+            "pixel_u": 971.2,
+            "pixel_v": 630.5,
+            "x_m": 4.378,
+            "y_m": 1.878,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 50
+          }
+        ]
+      }
+    ]
+  },
+  "Teste": {
+    "name": "Teste",
+    "created_at": "2026-10-19 09:23",
+    "sessions": [
+      {
+        "date": "19/10/2026 09:23",
+        "level": "medio",
+        "target_zone": 1,
+        "source": "video:treino_3.mp4",
+        "score": 10,
+        "hits": 2,
+        "misses": 2,
+        "total_shots": 4,
+        "accuracy": 50.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 10,
+            "time_sec": 0.33,
+            "pixel_u": 779.9,
+            "pixel_v": 767.9,
+            "x_m": 2.822,
+            "y_m": 9.319,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 46,
+            "time_sec": 1.53,
+            "pixel_u": 942.5,
+            "pixel_v": 321.7,
+            "x_m": 3.982,
+            "y_m": 0.45,
+            "zone_id": 1,
+            "zone_name": "Coluna Central",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 20
+          },
+          {
+            "shot_number": 3,
+            "frame": 94,
+            "time_sec": 3.13,
+            "pixel_u": 630.4,
+            "pixel_v": 796.1,
+            "x_m": 1.77,
+            "y_m": 10.192,
+            "zone_id": 0,
+            "zone_name": "Coluna Esquerda",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 15
+          },
+          {
+            "shot_number": 4,
+            "frame": 181,
+            "time_sec": 6.03,
+            "pixel_u": 1291.1,
+            "pixel_v": 742.6,
+            "x_m": 6.591,
+            "y_m": 8.479,
+            "zone_id": 2,
+            "zone_name": "Coluna Direita",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 10
+          }
+        ]
+      }
+    ]
+  }
+}

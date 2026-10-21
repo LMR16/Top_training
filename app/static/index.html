@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top Training — Treinamento Gamificado de Tênis</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- Barra Superior -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-ball"></span>
+      <div>
+        <h1>TOP TRAINING</h1>
+        <p>Visão Computacional &amp; Análise de Tênis</p>
+      </div>
+    </div>
+
+    <nav class="step-nav">
+      <button class="nav-btn active" data-view="setup" onclick="switchView('setup')">1. Perfil &amp; Fonte</button>
+      <button class="nav-btn" data-view="calibrate" onclick="switchView('calibrate')">2. Calibrar Quadra</button>
+      <button class="nav-btn" data-view="zone" onclick="switchView('zone')">3. Zona-Foco</button>
+      <button class="nav-btn" data-view="training" onclick="switchView('training')">4. Treino &amp; Vídeo</button>
+      <button class="nav-btn" data-view="summary" onclick="switchView('summary')">5. Resumo &amp; Ranking</button>
+    </nav>
+
+    <div class="top-actions">
+      <button id="btn-sound" class="btn-outline" onclick="toggleSound()">🔊 Som: ON</button>
+      <button id="btn-exit-app" class="btn-danger" onclick="exitApplication()" title="Encerrar servidor e sair do aplicativo">🚪 Sair do App</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ==================== TELA 1: PERFIL, NÍVEL E FONTE ==================== -->
+    <section id="view-setup" class="view active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>1. Perfil do Jogador</h2>
+          <p class="muted">Digite seu nome ou selecione um perfil existente para recuperar seu histórico.</p>
+
+          <label class="field-label">Perfis Salvos</label>
+          <select id="select-existing-profile" class="input" onchange="onSelectProfileDropdown()">
+            <option value="">-- Novo Jogador --</option>
+          </select>
+
+          <label class="field-label">Nome do Jogador</label>
+          <input type="text" id="input-player-name" class="input" placeholder="Ex: Lukas" value="Lukas" />
+
+          <h2 style="margin-top: 16px;">2. Fonte de Vídeo</h2>
+          <div class="radio-group">
+            <label class="radio-card active" id="lbl-src-video">
+              <input type="radio" name="source_type" value="video" checked onchange="onSourceTypeChange()" />
+              <div>
+                <strong>🎬 Vídeo Gravado (Análise Completa)</strong>
+                <span>Analisa o vídeo como um todo e exibe popup com todos os quiques</span>
+              </div>
+            </label>
+            <label class="radio-card" id="lbl-src-camera">
+              <input type="radio" name="source_type" value="camera" onchange="onSourceTypeChange()" />
+              <div>
+                <strong>📱 Câmera Ao Vivo (Iriun Webcam)</strong>
+                <span>Captura em tempo real via USB ou Wi-Fi</span>
+              </div>
+            </label>
+          </div>
+
+          <div id="video-select-box">
+            <label class="field-label">Arquivo em <code>src/input_videos/</code></label>
+            <select id="select-video-file" class="input"></select>
+          </div>
+
+          <div id="camera-select-box" style="display: none;">
+            <label class="field-label">Índice da Câmera (Iriun / Webcam)</label>
+            <select id="select-camera-index" class="input"></select>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>3. Nível de Dificuldade</h2>
+          <p class="muted">Define como a meia quadra oposta será dividida em zonas-alvo.</p>
+
+          <div class="level-cards">
+            <div class="level-card active" data-level="basico" onclick="selectLevel('basico')">
+              <div class="level-badge">2 ZONAS</div>
+              <h3>Básico</h3>
+              <p>Meia quadra dividida ao meio verticalmente: <strong>Esquerda (Cruzada)</strong> e <strong>Direita (Paralela)</strong>.</p>
+            </div>
+
+            <div class="level-card" data-level="medio" onclick="selectLevel('medio')">
+              <div class="level-badge">3 ZONAS</div>
+              <h3>Médio</h3>
+              <p>Três colunas verticais de direção: <strong>Esquerda</strong>, <strong>Centro</strong> e <strong>Direita</strong>.</p>
+            </div>
+
+            <div class="level-card" data-level="avancado" onclick="selectLevel('avancado')">
+              <div class="level-badge">6 ZONAS (3x2)</div>
+              <h3>Avançado</h3>
+              <p>Matriz 3 colunas &times; 2 profundidades (<strong>Curta / Área de Saque</strong> e <strong>Funda / Linha de Base</strong>).</p>
+            </div>
+          </div>
+
+          <div class="calibration-status-bar" id="setup-calib-status">
+            <span>Status da Quadra: Verificando...</span>
+          </div>
+
+          <div class="btn-row" style="margin-top: 12px;">
+            <button class="btn-secondary" onclick="goToCalibration()">📐 Calibrar Quadra (4 Pontos)</button>
+            <button class="btn-primary" onclick="switchView('zone')">Escolher Zona-Foco &rarr;</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TELA 2: CALIBRAÇÃO DA QUADRA ==================== -->
+    <section id="view-calibrate" class="view">
+      <div class="calib-layout">
+        <div class="card calib-canvas-card">
+          <div class="card-header-flex">
+            <div>
+              <h2>Mapeamento da Meia Quadra Oposta</h2>
+              <p class="muted" id="calib-instruction">Clique nos 4 cantos da meia quadra ou arraste os pontos existentes para ajuste fino.</p>
+            </div>
+            <div class="btn-row">
+              <button class="btn-outline" onclick="loadCalibrationSnapshot()">📸 Recapturar Frame</button>
+              <button class="btn-outline" onclick="resetCalibrationPoints()">🗑️ Limpar 4 Pontos</button>
+            </div>
+          </div>
+
+          <div class="canvas-wrapper">
+            <canvas id="calib-canvas" width="960" height="540"></canvas>
+          </div>
+        </div>
+
+        <div class="card calib-side-card">
+          <h2>Ordem dos 4 Cantos</h2>
+          <ol class="corner-list">
+            <li><span class="dot c1">1</span> <strong>Fundo Esquerdo</strong> $(0,0\text{ m})$</li>
+            <li><span class="dot c2">2</span> <strong>Fundo Direito</strong> $(8,23\text{ m}, 0)$</li>
+            <li><span class="dot c3">3</span> <strong>Rede Direita</strong> $(8,23\text{ m}, 11,885\text{ m})$</li>
+            <li><span class="dot c4">4</span> <strong>Rede Esquerda</strong> $(0, 11,885\text{ m})$</li>
+          </ol>
+
+          <div class="dim-box">
+            <div><strong>Largura (Simples):</strong> 8,23 m</div>
+            <div><strong>Profundidade (Meia Quadra):</strong> 11,885 m</div>
+          </div>
+
+          <button class="btn-primary full-width" onclick="saveCalibration()">✅ Calcular Homografia H e Salvar</button>
+
+          <hr class="divider" />
+
+          <h3>Validação da Homografia (UC09)</h3>
+          <p class="muted">Ative o modo abaixo e clique em qualquer ponto da quadra na foto para conferir a posição convertida em metros.</p>
+
+          <label class="toggle-row">
+            <input type="checkbox" id="chk-validate-mode" onchange="onToggleValidateMode()" />
+            <span>Ativar Clique de Inspeção em Metros $(x, y)$</span>
+          </label>
+
+          <div class="validation-panel" id="validation-output">
+            <div>Erro de Reprojeção: <strong id="val-reproj">-- px</strong></div>
+            <div>Ponto Clicado (px): <strong id="val-px">--</strong></div>
+            <div>Posição na Quadra (m): <strong id="val-meters">--</strong></div>
+            <div>Status: <strong id="val-inside">--</strong></div>
+          </div>
+
+          <button class="btn-secondary full-width" style="margin-top: 10px;" onclick="switchView('zone')">Avançar para Zona-Foco &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TELA 3: SELEÇÃO DA ZONA-FOCO ==================== -->
+    <section id="view-zone" class="view">
+      <div class="zone-layout">
+        <div class="card zone-info-card">
+          <h2>Escolha sua Zona-Foco</h2>
+          <p class="muted">Passe o mouse sobre a meia quadra vertical ao lado e clique na zona onde você deseja mirar durante o treino.</p>
+
+          <div class="summary-kv">
+            <div><span>Jogador:</span> <strong id="zone-lbl-player">Lukas</strong></div>
+            <div><span>Nível:</span> <strong id="zone-lbl-level">Básico (2 Zonas)</strong></div>
+            <div><span>Zona-Foco Selecionada:</span> <strong id="zone-lbl-target" class="highlight-green">Zona 1</strong></div>
+          </div>
+
+          <div class="rules-box">
+            <h4>Regras de Pontuação da Sessão</h4>
+            <ul>
+              <li><span class="badge-hit">+10 pts</span> Quique <strong>dentro da Zona-Foco</strong></li>
+              <li><span class="badge-miss">-5 pts</span> Quique em <strong>outra zona da meia quadra</strong> (mín. 0)</li>
+              <li><span class="badge-neutral">Vídeo</span> Analisa o vídeo completo, abre popup com pontos e destaca os quiques na tela</li>
+            </ul>
+          </div>
+
+          <div class="btn-row" style="margin-top: 18px;">
+            <button class="btn-outline" onclick="switchView('setup')">&larr; Voltar</button>
+            <button class="btn-primary" onclick="startTrainingSession()">🎾 Iniciar Análise / Treino</button>
+          </div>
+        </div>
+
+        <div class="card zone-canvas-card">
+          <div class="court-label-top">REDE ($y = 11,885\text{ m}$)</div>
+          <canvas id="zone-canvas" width="420" height="580"></canvas>
+          <div class="court-label-bottom">LINHA DE FUNDO ($y = 0,0\text{ m}$)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TELA 4: VÍDEO MAIOR + MINI QUADRA NO CANTO ==================== -->
+    <section id="view-training" class="view">
+      <div class="training-layout-v2">
+        <!-- Coluna Esquerda Compacta: Placar + Ações -->
+        <aside class="card training-sidebar-left">
+          <h3>PAINEL DA SESSÃO</h3>
+          <div class="session-meta">
+            <div>Jogador: <strong id="trn-player">Lukas</strong></div>
+            <div>Nível: <strong id="trn-level">Básico</strong></div>
+            <div>Alvo: <strong id="trn-target" class="highlight-green">Zona 1</strong></div>
+            <div id="trn-status-text" class="status-pill">Iniciando...</div>
+          </div>
+
+          <div class="score-big-box">
+            <span>PONTOS</span>
+            <strong id="live-score">0</strong>
+          </div>
+
+          <div class="stats-grid-3">
+            <div class="stat-mini hit">
+              <span>ACERTOS</span>
+              <strong id="live-hits">0</strong>
+            </div>
+            <div class="stat-mini miss">
+              <span>ERROS</span>
+              <strong id="live-misses">0</strong>
+            </div>
+            <div class="stat-mini">
+              <span>PRECISÃO</span>
+              <strong id="live-accuracy" style="color: var(--accent-yellow);">0%</strong>
+            </div>
+          </div>
+
+          <button id="btn-reopen-popup" class="btn-secondary full-width" style="display: none;" onclick="openAnalyzedPopup()">📊 Ver Popup "Vídeo Analisado"</button>
+          <button class="btn-primary full-width" onclick="finishAndGoToSummary()">🏆 Ir para Resumo &amp; Ranking</button>
+          <button class="btn-outline full-width" onclick="changeDifficultyDuringTraining()">🎯 Trocar Zona / Nível</button>
+          <button class="btn-outline full-width" onclick="changeProfileDuringTraining()">⚙️ Trocar Vídeo / Fonte</button>
+
+          <h4 style="margin-top: 8px; font-size: 0.78rem; color: var(--text-muted);">Quiques Detectados (Clique p/ ver)</h4>
+          <div id="live-shot-log" class="shot-log">
+            <p class="muted">Aguardando análise...</p>
+          </div>
+        </aside>
+
+        <!-- Centro Principal: VÍDEO MAIOR NA TELA -->
+        <div class="card training-main-video-card">
+          <div class="card-header-flex">
+            <div>
+              <h2 id="video-stage-title">Visualização dos Quiques no Vídeo</h2>
+              <p class="muted" id="video-stage-subtitle">Os círculos verdes indicam acertos na zona-foco e os vermelhos indicam erros.</p>
+            </div>
+            <div class="btn-row" id="video-playback-controls">
+              <button id="btn-pause-video" class="btn-outline" onclick="toggleVideoPause()">⏸️ Pausar</button>
+              <button class="btn-outline" onclick="restartVideoReplay()">⏮️ Reiniciar</button>
+            </div>
+          </div>
+
+          <div class="big-video-stage">
+            <img id="live-video-feed" src="" alt="Visualização do Vídeo Analisado" />
+
+            <!-- Overlay de carregamento enquanto analisa o vídeo como um todo -->
+            <div id="video-analyzing-overlay" class="analyzing-overlay" style="display: none;">
+              <div class="spinner"></div>
+              <h3 id="analyzing-title">Analisando o vídeo como um todo...</h3>
+              <p class="muted">Detectando trajetória da bola (YOLOv8) e calculando quiques na quadra</p>
+              <div class="analyzing-bar-wrap">
+                <div id="analyzing-bar-fill" class="analyzing-bar-fill"></div>
+              </div>
+              <small id="analyzing-frame-txt">Iniciando...</small>
+            </div>
+          </div>
+
+          <!-- Barra de Progresso Interativa (Seek) e Atalhos de Quiques -->
+          <div class="video-bottom-bar">
+            <div class="seek-row">
+              <div class="progress-bar-wrap clickable" id="video-seek-bar" onclick="onSeekBarClick(event)" title="Clique para pular para este instante do vídeo">
+                <div id="trn-progress-bar" class="progress-bar-fill"></div>
+              </div>
+              <small id="trn-frame-counter" class="muted">Frame 0 / 0</small>
+            </div>
+            <div id="bounce-jump-chips" class="bounce-chips-row"></div>
+          </div>
+        </div>
+
+        <!-- Canto Direito: TELA MENOR EM FORMATO DA QUADRA (MAPA DE ACERTOS E ERROS) -->
+        <aside class="card training-corner-court-card">
+          <div style="text-align: center; width: 100%;">
+            <h3>Mapa da Quadra (Acertos &times; Erros)</h3>
+            <p class="muted" style="font-size: 0.74rem; margin-bottom: 4px;">Densidade por zona (✓ Acertos | ✗ Erros)</p>
+          </div>
+
+          <div class="court-label-top">REDE</div>
+          <canvas id="training-court-canvas" width="300" height="420"></canvas>
+          <div class="court-label-bottom">LINHA DE FUNDO</div>
+
+          <div class="zone-density-box">
+            <div class="density-row hit">
+              <span>🔥 Mais Acertos:</span>
+              <strong id="corner-most-hits">--</strong>
+            </div>
+            <div class="density-row miss">
+              <span>⚠️ Mais Erros:</span>
+              <strong id="corner-most-misses">--</strong>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ==================== TELA 5: RESUMO DA SESSÃO & RANKING ==================== -->
+    <section id="view-summary" class="view">
+      <div class="summary-kpis">
+        <div class="kpi-card">
+          <span>PONTUAÇÃO FINAL</span>
+          <strong id="sum-score">0</strong>
+        </div>
+        <div class="kpi-card hit">
+          <span>BOLAS CERTAS (NA ZONA)</span>
+          <strong id="sum-hits">0</strong>
+        </div>
+        <div class="kpi-card miss">
+          <span>BOLAS ERRADAS</span>
+          <strong id="sum-misses">0</strong>
+        </div>
+        <div class="kpi-card">
+          <span>PRECISÃO DO TREINO</span>
+          <strong id="sum-accuracy">0,0%</strong>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="card summary-map-card">
+          <h2>Mapa Final de Quiques da Sessão</h2>
+          <p class="muted">Pontos verdes indicam acertos na zona-foco; pontos vermelhos indicam erros.</p>
+          <div class="court-label-top">REDE</div>
+          <canvas id="summary-court-canvas" width="380" height="520"></canvas>
+          <div class="court-label-bottom">LINHA DE FUNDO</div>
+          <div class="btn-row" style="margin-top: 10px;">
+            <button class="btn-primary" onclick="switchView('zone')">🔄 Novo Treino</button>
+            <button class="btn-outline" onclick="switchView('setup')">⚙️ Mudar Configurações</button>
+          </div>
+        </div>
+
+        <div class="card ranking-card">
+          <div class="card-header-flex">
+            <div>
+              <h2>🏆 Ranking de Jogadores</h2>
+              <p class="muted">Melhor sessão de cada perfil ordenada por pontuação e precisão.</p>
+            </div>
+            <div class="ranking-tabs">
+              <button class="tab-btn active" data-rank-level="basico" onclick="switchRankingTab('basico')">Básico</button>
+              <button class="tab-btn" data-rank-level="medio" onclick="switchRankingTab('medio')">Médio</button>
+              <button class="tab-btn" data-rank-level="avancado" onclick="switchRankingTab('avancado')">Avançado</button>
+            </div>
+          </div>
+
+          <table class="ranking-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Jogador</th>
+                <th>Pontos</th>
+                <th>Acertos</th>
+                <th>Erros</th>
+                <th>Precisão</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-tbody">
+              <tr><td colspan="7" class="muted">Nenhum treino registrado neste nível ainda.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== POPUP MODAL: "VÍDEO ANALISADO" ==================== -->
+  <div id="modal-video-analyzed" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-badge-check">✅</div>
+        <div>
+          <h2>Vídeo Analisado!</h2>
+          <p class="muted" id="modal-subtitle">Análise completa de quiques e pontuação finalizada.</p>
+        </div>
+        <button class="modal-close-x" onclick="closeAnalyzedPopup()">&times;</button>
+      </div>
+
+      <div class="modal-kpi-grid">
+        <div class="modal-kpi">
+          <span>PONTUAÇÃO</span>
+          <strong id="pop-score">0 pts</strong>
+        </div>
+        <div class="modal-kpi hit">
+          <span>ACERTOS (+10)</span>
+          <strong id="pop-hits">0</strong>
+        </div>
+        <div class="modal-kpi miss">
+          <span>ERROS (-5)</span>
+          <strong id="pop-misses">0</strong>
+        </div>
+        <div class="modal-kpi">
+          <span>PRECISÃO</span>
+          <strong id="pop-accuracy" style="color: var(--accent-yellow);">0%</strong>
+        </div>
+      </div>
+
+      <div class="modal-density-summary">
+        <div class="density-card hit">
+          <span>🔥 Onde teve mais Acertos:</span>
+          <strong id="pop-most-hits">--</strong>
+        </div>
+        <div class="density-card miss">
+          <span>⚠️ Onde teve mais Erros:</span>
+          <strong id="pop-most-misses">--</strong>
+        </div>
+      </div>
+
+      <h4 style="margin: 10px 0 6px; font-size: 0.84rem; color: var(--text-muted);">Detalhamento dos Pontos / Quiques no Vídeo:</h4>
+      <div id="pop-events-list" class="modal-events-list"></div>
+
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeAnalyzedPopup(); finishAndGoToSummary();">🏆 Ir para Ranking Geral</button>
+        <button class="btn-primary" onclick="closeAnalyzedPopup()">🎬 Ver Vídeo Grande e Mapa de Quiques &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
