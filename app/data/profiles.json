@@ -448,6 +448,45 @@
             "score_after": 50
           }
         ]
+      },
+      {
+        "date": "04/11/2026 09:49",
+        "level": "medio",
+        "target_zone": 1,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 0,
+        "total_shots": 0,
+        "accuracy": 0.0,
+        "events": []
+      },
+      {
+        "date": "04/11/2026 09:51",
+        "level": "medio",
+        "target_zone": 1,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 1,
+        "total_shots": 1,
+        "accuracy": 0.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 25,
+            "time_sec": -25.0,
+            "pixel_u": 275.9,
+            "pixel_v": 327.7,
+            "x_m": 1.118,
+            "y_m": 11.517,
+            "zone_id": 0,
+            "zone_name": "Coluna Esquerda",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          }
+        ]
       }
     ]
   },
