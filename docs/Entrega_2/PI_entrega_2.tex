@@ -1,0 +1,483 @@
+\documentclass[a4paper,11pt]{article}
+
+% ============================================================
+%  TOP TRAINING - Relatorio de Evolucao (Entrega 2)
+%  DAS5142 - Projeto Integrador - UFSC
+% ============================================================
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{xcolor,colortbl}
+\usepackage{hyperref}
+\usepackage[left=2cm,right=1.5cm,bottom=1.8cm,top=2.3cm,foot=0.8cm]{geometry}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\DeclareUnicodeCharacter{2212}{-}
+
+% --- PALETA DE CORES ---
+\definecolor{primary}{RGB}{31, 78, 121}
+\definecolor{rowgray}{RGB}{245, 248, 252}
+\definecolor{ganttblue}{RGB}{68, 114, 196}
+\definecolor{ganttorange}{RGB}{237, 125, 49}
+\definecolor{ganttgreen}{RGB}{46, 160, 90}
+\definecolor{quadrabg}{HTML}{3A7BB0}
+\definecolor{quadrapiso}{HTML}{193B5C}
+\definecolor{acerto}{HTML}{00B35F}
+\definecolor{erro}{HTML}{E03030}
+\definecolor{parcial}{HTML}{D99B00}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{DAS5142 -- Projeto Integrador}
+\rhead{Top Training -- Entrega 2}
+\rfoot{\thepage}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary, citecolor=primary}
+
+% ============================================================
+%  MACROS TikZ (CASOS DE USO, ARQUITETURA E SEQUENCIA)
+% ============================================================
+\tikzset{
+  seqbox/.style={draw=primary, thick, rectangle, rounded corners=3pt, fill=blue!10,
+                 align=center, font=\scriptsize\bfseries, minimum height=0.85cm,
+                 minimum width=2.4cm, text width=2.3cm, inner sep=2pt},
+  uc/.style={draw=primary, ellipse, fill=blue!7, align=center, font=\scriptsize,
+             text width=2.9cm, minimum width=3.6cm, minimum height=0.95cm, inner sep=1pt},
+  ucx/.style={draw=gray!70!black, ellipse, fill=gray!10, align=center, font=\scriptsize,
+              text width=2.9cm, minimum width=3.6cm, minimum height=0.95cm, inner sep=1pt},
+  bloco/.style={draw=primary, thick, rectangle, rounded corners=3pt, fill=blue!8, align=center,
+                font=\scriptsize, minimum height=1.05cm, text width=3.0cm, inner sep=3pt},
+  blocoverde/.style={bloco, draw=acerto!80!black, fill=green!12},
+  blocolaranja/.style={bloco, draw=orange!80!black, fill=orange!15},
+  blococinza/.style={bloco, draw=gray!70!black, fill=gray!14},
+  linha/.style={draw, -{Latex}, thick, gray!75!black}
+}
+
+\newcommand{\lifeline}[4]{%
+  \node[seqbox] (#2) at (#1,0) {#3};
+  \draw[dashed, gray!80!black] (#1,-0.45) -- (#1,#4);}
+\newcommand{\msg}[4]{%
+  \draw[-{Latex}, thick, primary!90!black] (#1,#3) -- node[above, font=\scriptsize, align=center, inner sep=2pt]{#4} (#2,#3);}
+\newcommand{\rmsg}[4]{%
+  \draw[-{Latex}, thick, dashed, gray!70!black] (#1,#3) -- node[above, font=\scriptsize, align=center, inner sep=2pt]{#4} (#2,#3);}
+\newcommand{\selfmsg}[3]{%
+  \draw[thick, primary!90!black] (#1,#2) -- (#1+0.65,#2) -- (#1+0.65,#2-0.45);
+  \draw[-{Latex}, thick, primary!90!black] (#1+0.65,#2-0.45) -- (#1,#2-0.45);
+  \node[right, font=\scriptsize, align=left, inner sep=2pt] at (#1+0.65,#2-0.22) {#3};}
+\newcommand{\frag}[5]{%
+  \draw[thick, blue!60!black, rounded corners=2pt] (#1,#3) rectangle (#2,#4);
+  \node[anchor=north west, fill=blue!15, draw=blue!60!black, font=\scriptsize\bfseries, inner sep=2pt]
+        at (#1,#3) {#5};}
+
+\newcommand{\ator}[4]{%
+  \draw[thick] (#2,#3) circle (0.2);
+  \draw[thick] (#2,#3-0.2) -- (#2,#3-0.9);
+  \draw[thick] (#2-0.4,#3-0.5) -- (#2+0.4,#3-0.5);
+  \draw[thick] (#2,#3-0.9) -- (#2-0.3,#3-1.4);
+  \draw[thick] (#2,#3-0.9) -- (#2+0.3,#3-1.4);
+  \node[inner sep=0pt, minimum size=0.9cm] (#1) at (#2,#3-0.6) {};
+  \node[font=\scriptsize\bfseries, align=center, below] at (#2,#3-1.4) {#4};}
+
+% Badges de status para a tabela de requisitos
+\newcommand{\stok}{\textcolor{acerto}{\textbf{Concluído}}}
+\newcommand{\stpar}{\textcolor{parcial}{\textbf{Parcial}}}
+\newcommand{\stpen}{\textcolor{erro}{\textbf{Pendente}}}
+
+\newcommand{\req}[5]{#1 & #2 & \centering #3 & \centering #4 & #5 \\ \hline}
+\newcommand{\reccat}[1]{\multicolumn{5}{|l|}{\cellcolor{blue!14}\textbf{#1}} \\ \hline}
+
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+  \IfFileExists{logoUFSCsimples.png}{\includegraphics[height=2cm]{logoUFSCsimples.png}\\}{}
+  {\Large Universidade Federal de Santa Catarina -- UFSC} \\
+  {\Large Centro Tecnológico -- CTC} \\
+  \vspace{0.8cm}
+  {\large DAS5142-07220B -- Projeto Integrador} \\
+  \vfill
+  {\LARGE\textbf{Top Training}} \\[0.3cm]
+  {\large\textbf{Treinamento Gamificado de Tênis por Visão Computacional}} \\[0.3cm]
+  \large{Relatório da Entrega 2 -- Evolução de Requisitos, Arquitetura e Implementação} \\
+  \vspace{1cm}
+  \textbf{Professores:} \\ Leandro Buss Becker \\ Rodrigo Castelan Carlson
+  \vfill\vspace{0.8cm}
+  \textbf{Integrantes:} \\
+  Erik Lisboa de Almeida \\
+  Leonardo Sanches Conti \\
+  Lukas Martins Ristow
+  \vfill
+  Florianópolis, \today.
+\end{center}
+
+\clearpage
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Introdução e Contextualização}
+% ============================================================
+
+\subsection{Transição de Escopo e Foco no Produto Atual}
+Na etapa inicial da disciplina, a equipe avaliou a base legada do projeto \textit{Drillbot} (Robô Coletor de Bolas) e constatou que o ativo de maior maturidade técnica era o pipeline de visão computacional (YOLO + homografia), enquanto o desenvolvimento eletromecânico do robô apresentava custos e dependências de hardware incompatíveis com o cronograma semestral. Diante disso, o projeto foi redirecionado integralmente para o \textbf{Top Training}: uma plataforma de análise automática de treinos de tênis e gamificação de precisão de golpes, utilizando apenas um computador e a câmera de um smartphone (ou vídeos gravados em quadra).
+
+Nesta \textbf{Entrega 2}, o projeto deixou a fase puramente conceitual e consolidou dois subprojetos funcionais integrados no mesmo repositório:
+\begin{enumerate}[nosep]
+  \item \textbf{Pipeline Offline de Rastreamento e Exportação (\texttt{main.py} e \texttt{trackers/}):} motor de detecção em Python com YOLOv8 customizado (\texttt{yolov8\_best\_2.pt}), filtragem temporal de movimento, interpolação de oclusões e detecção automática de quiques com exportação de vídeos anotados.
+  \item \textbf{Aplicativo Interativo Gamificado (\texttt{app/}):} sistema cliente-servidor local (\textbf{FastAPI} no back-end e \textbf{JavaScript / HTML5 Canvas} no front-end) contendo calibração interativa de 4 pontos por homografia planar, divisão em zonas de dificuldade, análise completa de vídeo com \textit{popup} de métricas, visualização do vídeo em destaque com mini-quadra 2D de densidade de acertos/erros e ranking persistente de jogadores.
+\end{enumerate}
+
+\subsection{Objetivos do Sistema}
+O objetivo geral do \textbf{Top Training} é mapear a meia quadra oposta ao jogador a partir da imagem da câmera, rastrear a trajetória da bola de tênis em movimento, determinar o instante e a coordenada métrica $(x, y)$ do primeiro quique de cada golpe e avaliar se a bola atingiu a \textbf{zona-foco} escolhida pelo atleta, convertendo o desempenho em pontuação e estatísticas espaciais.
+
+% ============================================================
+\section{Desenvolvimento Técnico e Visão Computacional}
+% ============================================================
+
+\subsection{Cenário Geométrico e Homografia Planar}
+A câmera é posicionada de frente para a meia quadra alvo em orientação vertical. O usuário marca na interface os 4 cantos da meia quadra de simples ($8{,}23\text{ m}$ de largura por $11{,}885\text{ m}$ de comprimento até a rede, com linha de saque a $5{,}485\text{ m}$ da linha de fundo). A partir dos pares de pontos em pixels $(u_i, v_i)$ e em metros $(x_i, y_i)$, o módulo \texttt{HomographyManager} calcula a matriz de transformação projetiva $H \in \mathbb{R}^{3\times 3}$ via \texttt{cv2.findHomography}, permitindo projetar qualquer quique detectado na imagem diretamente para coordenadas métricas reais $(x_m, y_m)$ no piso da quadra.
+
+\subsection{Treinamento do Modelo YOLOv8 em Nuvem (Google Colab vs. CPU Local)}
+Um dos principais desafios técnicos superados nesta entrega foi a incapacidade do modelo genérico pré-treinado no conjunto COCO (\texttt{yolov8n.pt}) de detectar bolas de tênis pequenas e rápidas em vídeos reais de quadra (onde a taxa de detecção inicial era inferior a 2\%). Para resolver isso, foi realizado o \textit{fine-tuning} de modelos dedicados (\texttt{yolov8\_best.pt} e \texttt{yolov8\_best\_2.pt}) combinando um \textit{dataset} rotulado de bolas de tênis obtido via \textbf{Roboflow} (\texttt{tennis-ball-detection-6}, com $1.168$ imagens anotadas) e quadros reais extraídos dos nossos próprios vídeos de quadra através do script \texttt{video\_to\_frame.py}.
+
+\textbf{Por que o treinamento foi executado no Google Colab e não em um PC comum (CPU)?}
+\begin{itemize}[nosep]
+  \item \textbf{Custo computacional em CPU local:} O treinamento de uma rede convolucional profunda como a YOLOv8 em resolução nativa $\texttt{imgsz}=640$ por $50$ a $100$ épocas exige bilhões de operações matriciais de convolução 2D e cálculo de gradientes (\textit{backpropagation}) a cada lote (\textit{batch}). Em um computador pessoal comum operando apenas com processador (CPU, sem GPU NVIDIA dedicada com núcleos CUDA), cada época de treinamento sobre mais de mil imagens consome entre \textbf{15 e 25 minutos}. Assim, um único ciclo completo de $60$ épocas levaria de \textbf{15 a 25 horas ininterruptas}, causando superaquecimento (\textit{thermal throttling}), travando a máquina para uso cotidiano e tornando inviável testar múltiplos ajustes de hiperparâmetros.
+  \item \textbf{Aceleração por GPU no Google Colab:} Utilizando o ambiente em nuvem \textbf{Google Colab} equipado com GPU dedicada \textbf{NVIDIA Tesla T4 (16 GB VRAM)}, o paralelismo massivo dos núcleos Tensor/CUDA reduziu o tempo de cada época para poucos segundos, concluindo o treinamento completo em cerca de \textbf{25 a 35 minutos}. Ao final do treinamento na nuvem, apenas o arquivo compacto de pesos otimizados (\texttt{yolov8\_best\_2.pt}, com $\approx 6\text{ MB}$) foi exportado e integrado à pasta \texttt{models/} para inferência local.
+\end{itemize}
+
+\subsection{Rastreamento Temporal e Detecção de Quiques}
+Para evitar que bolas paradas no fundo da quadra ou marcas no piso gerem falsas detecções, o módulo \texttt{BallTracker} implementa um pipeline em quatro estágios:
+\begin{enumerate}[nosep]
+  \item \textbf{Filtro de Movimento Real (\texttt{cv2.absdiff}):} Calcula a diferença absoluta de intensidade em escala de cinza entre o quadro atual e o anterior na região da caixa delimitadora, descartando objetos estáticos ($\Delta I < 5{,}5$).
+  \item \textbf{Portão de Continuidade Espacial e Remoção de \textit{Spikes}:} Prioriza detecções próximas à última posição conhecida da bola em voo e remove saltos isolados incompatíveis com a velocidade física da bola.
+  \item \textbf{Interpolação Limitada (\texttt{Pandas}):} Preenche falhas curtas de detecção (até $\texttt{max\_gap}=12$ frames) por interpolação linear apenas no interior de trajetórias ativas (\texttt{limit\_area='inside'}).
+  \item \textbf{Detecção de Quique por Inflexão Vertical:} Como o eixo vertical $Y$ da imagem cresce de cima para baixo, a bola caindo apresenta $Y$ crescente até atingir o solo (máximo local na janela suavizada de 7 frames) e passa a apresentar $Y$ decrescente ao subir após o impacto.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{img/fig_treino_quiques.jpg}{%
+  \includegraphics[width=0.88\textwidth]{img/fig_treino_quiques.jpg}%
+}{%
+  \fbox{\parbox{0.8\textwidth}{\centering Imagem de treino (\texttt{img/fig\_treino\_quiques.jpg})}}%
+}
+\caption{Resultado real do rastreamento em quadra (\texttt{quadra\_2.MOV}): polígono amarelo da meia quadra calibrada, rastro parabólico da bola em movimento e marcação automática dos quiques detectados.}
+\label{fig:treino}
+\end{figure}
+
+% ============================================================
+\section{Arquitetura Geral e Estrutura de Armazenamento}
+% ============================================================
+
+\subsection{Arquitetura Geral}
+O sistema foi dividido em quatro módulos principais conectados em sequência, apoiados por uma camada de armazenamento local. O back-end em \textbf{Python (FastAPI)} processa a visão computacional e as regras de pontuação, enquanto o front-end em \textbf{JavaScript / HTML5} exibe a interface gráfica no navegador (Figura~\ref{fig:arq}).
+
+\begin{figure}[H]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1.0cm and 1.1cm]
+  \node[bloco] (fonte) {\textbf{1. Entrada de Vídeo}\\Câmera (Iriun)\\ou Vídeo Gravado};
+  \node[bloco, right=of fonte] (visao) {\textbf{2. Visão Computacional}\\Detecção da Bola (YOLO)\\e Ponto de Quique};
+  \node[blocolaranja, right=of visao] (regras) {\textbf{3. Quadra e Regras}\\Homografia (4 pontos),\\Zonas e Pontuação};
+  \node[blocoverde, right=of regras] (ui) {\textbf{4. Interface Web}\\Vídeo Analisado, Mapa 2D,\\Popup e Ranking};
+
+  \node[blococinza, below=1.0cm of regras, xshift=-2.0cm, text width=7.5cm, minimum height=0.9cm] (dados) {\textbf{5. Armazenamento Local}\\Perfis e Ranking (\texttt{.json}) $\bullet$ Calibração (\texttt{.json}) $\bullet$ Cache e Vídeos (\texttt{.pkl / .mp4})};
+
+  \draw[linha] (fonte) -- (visao);
+  \draw[linha] (visao) -- (regras);
+  \draw[linha] (regras) -- (ui);
+  \draw[linha, <->] (visao.south) -- (dados.north -| visao.south);
+  \draw[linha, <->] (regras.south) -- (dados.north -| regras.south);
+\end{tikzpicture}}
+\caption{Arquitetura geral simplificada do Top Training.}
+\label{fig:arq}
+\end{figure}
+
+\subsection{Organização dos Arquivos}
+Os dados de perfis, calibração e vídeos são salvos localmente nas pastas do projeto conforme resumido na Tabela~\ref{tab:arquivos}.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.22}
+\caption{Organização dos arquivos e dados do projeto.}
+\label{tab:arquivos}
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{4.0cm} l X}
+\toprule
+\normalfont\textbf{Pasta / Arquivo} & \textbf{Tipo} & \textbf{ Finalidade} \\
+\midrule
+app/data/profiles.json & JSON & Guarda os perfis criados, histórico de treinos, pontuação e dados do Ranking. \\
+\rowcolor{rowgray}
+app/data/homografia.json & JSON & Guarda os 4 cantos calibrados da quadra para reutilização automática. \\
+src/input\_videos/ & Vídeo & Vídeos de treino brutos usados para teste e validação no aplicativo. \\
+\rowcolor{rowgray}
+stubs/*.pkl & Cache & Salva as detecções já processadas de cada vídeo para abrir a análise instantaneamente nos testes seguintes. \\
+runs/Ball\_Tracker/ & Vídeo & Salva os vídeos finais gerados pelo modo offline (\texttt{out\_video\_1.mp4}, \texttt{out\_video\_2.mp4}...). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Interface Gráfica e Fluxo de Uso}
+A interface do aplicativo possui 5 etapas diretas ajustadas ao tamanho da tela: (1)~\textbf{Perfil \& Fonte}, (2)~\textbf{Calibrar Quadra}, (3)~\textbf{Zona-Foco}, (4)~\textbf{Treino \& Vídeo} e (5)~\textbf{Resumo \& Ranking}, além de botão para sair do aplicativo.
+
+Ao analisar um vídeo gravado, o sistema processa o vídeo por completo e exibe uma janela \textit{popup} (\textbf{``Vídeo Analisado!''}) com o resumo dos pontos. Na tela principal, o \textbf{vídeo aparece em destaque ao centro} mostrando os quiques, enquanto uma \textbf{mini-quadra no canto direito} exibe o mapa onde ocorreram mais acertos e erros (Figura~\ref{fig:ui}).
+
+\begin{figure}[H]
+\centering
+\IfFileExists{img/fig_interface_analise.png}{%
+  \includegraphics[width=0.92\textwidth]{img/fig_interface_analise.png}%
+}{%
+  \fbox{\parbox{0.8\textwidth}{\centering Captura da Interface (\texttt{img/fig\_interface\_analise.png})}}%
+}
+\caption{Tela 4 do aplicativo Top Training: painel da sessão à esquerda, vídeo analisado em destaque ao centro com marcação dos quiques e atalhos temporais, e mini-quadra 2D no canto direito indicando onde ocorreram mais acertos e erros.}
+\label{fig:ui}
+\end{figure}
+
+% ============================================================
+\section{Diagramas de Casos de Uso e de Sequência}
+% ============================================================
+
+\subsection{Diagrama de Casos de Uso}
+A Figura~\ref{fig:uc} apresenta os casos de uso do sistema interagindo com o \textbf{Jogador}, a \textbf{Fonte de Vídeo (Câmera Iriun / Arquivo)} e o \textbf{Desenvolvedor}.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}
+  % Fronteira do sistema
+  \draw[thick, rounded corners=6pt, fill=gray!4] (2.6,0.9) rectangle (13.6,-15.2);
+  \node[font=\small\bfseries, anchor=north] at (8.1,0.8) {Sistema Top Training};
+
+  % Atores
+  \ator{jog}{0}{-5.6}{Jogador}
+  \ator{cam}{16.2}{-5.6}{Câmera Iriun\\/ Vídeo}
+  \ator{dev}{0}{-12.8}{Desenvolvedor}
+
+  % Coluna esquerda: Casos de uso principais (espacamento vertical de 1.7 cm)
+  \node[uc] (u1) at (5.4,-0.5)  {UC01\\Criar / selecionar perfil};
+  \node[uc] (u2) at (5.4,-2.2)  {UC02\\Escolher nível (2, 3, 6 zonas)};
+  \node[uc] (u3) at (5.4,-3.9)  {UC03\\Calibrar quadra (4 pontos)};
+  \node[uc] (u4) at (5.4,-5.6)  {UC04\\Selecionar zona-foco};
+  \node[uc] (u5) at (5.4,-7.3)  {UC05\\Analisar vídeo / Treino};
+  \node[uc] (u6) at (5.4,-9.0)  {UC06\\Ver popup e mapa de quiques};
+  \node[uc] (u7) at (5.4,-10.7) {UC07\\Consultar resumo e ranking};
+  \node[uc] (u8) at (5.4,-12.4) {UC08\\Trocar zona / sair do app};
+  \node[uc] (u9) at (5.4,-14.1) {UC09\\Validar homografia (m)};
+
+  % Coluna direita: Inclusoes (espacamento amplo de 2.4 cm)
+  \node[ucx] (i1) at (11.0,-2.4)  {UC10\\Capturar frame base};
+  \node[ucx] (i2) at (11.0,-4.8)  {UC11\\Calcular homografia $H$};
+  \node[ucx] (i3) at (11.0,-7.3)  {UC12\\Detectar bola e quiques};
+  \node[ucx] (i4) at (11.0,-9.8)  {UC13\\Avaliar zonas e pontos};
+  \node[ucx] (i5) at (11.0,-12.2) {UC14\\Salvar sessão em JSON};
+
+  % Associacoes com atores
+  \foreach \caso in {u1,u2,u3,u4,u5,u6,u7,u8}{\draw[thick] (jog.east) -- (\caso.west);}
+  \draw[thick] (dev.east) -- (u9.west);
+  \draw[thick] (cam.west) -- (i1.east);
+  \draw[thick] (cam.west) -- (i3.east);
+
+  % Relacoes <<include>>
+  \draw[-{Latex}, dashed] (u3.north east) -- node[above, sloped, font=\tiny]{\guillemotleft include\guillemotright} (i1.west);
+  \draw[-{Latex}, dashed] (u3.south east) -- node[above, sloped, font=\tiny]{\guillemotleft include\guillemotright} (i2.west);
+  \draw[-{Latex}, dashed] (u5.east) -- node[above, font=\tiny]{\guillemotleft include\guillemotright} (i3.west);
+  \draw[-{Latex}, dashed] (u5.south east) -- (i4.north west);
+  \draw[-{Latex}, dashed] (u6.east) -- node[above, sloped, font=\tiny]{\guillemotleft include\guillemotright} (i4.west);
+  \draw[-{Latex}, dashed] (u7.east) -- node[above, sloped, font=\tiny]{\guillemotleft include\guillemotright} (i5.west);
+  \draw[-{Latex}, dashed] (u9.east) .. controls (8.8,-13.8) and (8.8,-6.0) .. (i2.south west);
+\end{tikzpicture}}
+\caption{Diagrama de casos de uso atualizado do Top Training.}
+\label{fig:uc}
+\end{figure}
+
+\subsection{Diagrama de Sequência Unificado}
+A Figura~\ref{fig:seq} sintetiza em uma única página o fluxo completo de uma sessão no aplicativo, desde a configuração do perfil e calibração até a análise de quiques, exibição da \textit{popup} de resultados e persistência no ranking.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}
+  \lifeline{0}{jog}{Jogador}{-13.2}
+  \lifeline{3.7}{ui}{Front-end Web\\(JS / Canvas)}{-13.2}
+  \lifeline{7.6}{api}{Back-end FastAPI\\+ BallTracker (YOLO)}{-13.2}
+  \lifeline{11.5}{eng}{Homografia $H$\\+ GameEngine}{-13.2}
+  \lifeline{15.2}{db}{Armazenamento\\(\texttt{data/*.json} / \texttt{.pkl})}{-13.2}
+
+  % 1. Configuracao e Calibracao
+  \msg{0}{3.7}{-1.1}{1. Define perfil, fonte, nível e 4 pontos}
+  \msg{3.7}{7.6}{-1.9}{\texttt{POST /api/calibrate} (4 cantos px)}
+  \msg{7.6}{11.5}{-2.6}{calibrarMatrizH(pontos, $8{,}23\times 11{,}885\text{ m}$)}
+  \msg{7.6}{15.2}{-3.3}{salvar \texttt{homografia.json}}
+  \rmsg{7.6}{3.7}{-4.0}{$H$ calibrada + erro de reprojeção (px)}
+
+  % 2. Escolha da Zona e Inicio do Treino/Analise
+  \msg{0}{3.7}{-4.9}{2. Clica na Zona-Foco e inicia análise}
+  \msg{3.7}{7.6}{-5.7}{\texttt{POST /api/training/start}}
+
+  \frag{6.2}{16.4}{-6.3}{-9.6}{Análise Completa do Vídeo / Sessão}
+  \msg{7.6}{15.2}{-7.1}{ler cache \texttt{stubs/*.pkl} (ou executar YOLO frame a frame)}
+  \rmsg{15.2}{7.6}{-7.8}{trajetória interpolada + picos verticais $Y$ (quiques)}
+  \msg{7.6}{11.5}{-8.6}{avaliarQuiques($(u,v) \rightarrow (x,y)\text{ m}$, zona-foco)}
+  \rmsg{11.5}{7.6}{-9.3}{placar ($+10/-5$), precisão e mapa de densidade por zona}
+
+  % 3. Persistencia e Exibicao
+  \msg{7.6}{15.2}{-10.3}{gravar sessão em \texttt{profiles.json} e atualizar ranking}
+  \rmsg{7.6}{3.7}{-11.1}{\texttt{analysis\_done = true} + stream de vídeo anotado}
+  \msg{3.7}{0}{-11.9}{3. Exibe Popup ``Vídeo Analisado'', vídeo grande e mini-quadra 2D}
+  \msg{0}{3.7}{-12.7}{4. Clica nos quiques p/ rever no vídeo ou encerra (\texttt{/api/shutdown})}
+\end{tikzpicture}}
+\caption{Diagrama de sequência unificado do fluxo ponta a ponta no Top Training.}
+\label{fig:seq}
+\end{figure}
+
+% ============================================================
+\section{Evolução e Status dos Requisitos}
+% ============================================================
+A Tabela~\ref{tab:req} apresenta os requisitos funcionais (RF) e não funcionais (RNF) do projeto, destacando a evolução alcançada nesta Entrega 2. Dos \textbf{39 requisitos mapeados}, \textbf{25 encontram-se Concluídos (64\%)}, \textbf{11 Parciais (28\%)} em fase de refinamento experimental e apenas \textbf{3 Pendentes (8\%)}.
+
+\begin{center}
+\scriptsize
+\renewcommand{\arraystretch}{1.24}
+\begin{longtable}{|p{1.1cm}|p{6.8cm}|p{0.7cm}|p{1.6cm}|p{4.8cm}|}
+\caption{Matriz de Requisitos e Status de Implementação na Entrega 2.}\label{tab:req}\\
+\hline
+\rowcolor{primary}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Requisito}} & \textcolor{white}{\textbf{Pri.}} & \textcolor{white}{\textbf{Status}} & \textcolor{white}{\textbf{Evidência / Implementação Atual}} \\ \hline
+\endfirsthead
+\hline
+\rowcolor{primary}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Requisito}} & \textcolor{white}{\textbf{Pri.}} & \textcolor{white}{\textbf{Status}} & \textcolor{white}{\textbf{Evidência / Implementação Atual}} \\ \hline
+\endhead
+\hline \multicolumn{5}{r}{\tiny continua na próxima página} \\
+\endfoot
+\hline
+\endlastfoot
+
+\reccat{A. Mapeamento da Quadra e Homografia}
+\req{RF01}{Escolher a fonte da calibração: frame de vídeo gravado ou câmera ao vivo (Iriun).}{M}{\stok}{Rota \texttt{/api/frame\_snapshot} implementada na Tela 1/2.}
+\req{RF02}{Marcar os 4 cantos da meia quadra por clique, gerando polígono em tempo real.}{M}{\stok}{Canvas interativo na Tela 2 (\texttt{app.js}).}
+\req{RF03}{Arrastar os pontos marcados para ajuste fino com o mouse.}{M}{\stok}{Raio de captura de 26 px com \textit{drag-and-drop}.}
+\req{RF04}{Editar/validar coordenadas na própria interface gráfica, sem terminal.}{M}{\stok}{Modo de inspeção de pontos em metros na Tela 2.}
+\req{RF05}{Calcular a homografia $H$ e exibir o mapa vertical 2D retificado da meia quadra.}{M}{\stok}{Cálculo via \texttt{cv2.findHomography} e Canvas 2D.}
+\req{RF06}{Salvar e carregar a calibração automaticamente entre sessões.}{S}{\stok}{Persistência automática em \texttt{app/data/homografia.json}.}
+\req{RF07}{Suportar dimensões oficiais da quadra de simples ($8{,}23 \times 11{,}885\text{ m}$).}{S}{\stok}{Configurado em \texttt{HomographyManager}.}
+
+\reccat{B. Câmera, Vídeo e Comunicação}
+\req{RF08}{Abstração da fonte de vídeo (câmera ao vivo via Iriun/UVC e arquivo de vídeo).}{M}{\stok}{Seletor de fonte unificado no aplicativo.}
+\req{RF09}{Seleção de índice da câmera (0, 1, 2) e tratamento de erro de conexão.}{S}{\stpar}{Seleção pronta; falta reconexão automática e limpeza de buffer.}
+\req{RF10}{Analisar vídeo gravado como um todo (sem hardware externo) com reprodução interativa.}{S}{\stok}{Análise completa com barra de progresso, \textit{seek} e atalhos.}
+\req{RF11}{Exibir contador de frames e progresso na interface.}{C}{\stok}{Barra de progresso e contador de frames ativos.}
+
+\reccat{C. Visão Computacional e Detecção de Quiques}
+\req{RF12}{Detectar bolas em movimento com YOLOv8 retreinado (\texttt{yolov8\_best\_2.pt}).}{M}{\stok}{Modelo treinado no Colab integrado em \texttt{models/}.}
+\req{RF13}{Rastrear a trajetória recente e interpolar oclusões curtas da bola.}{M}{\stok}{Interpolação linear até 12 frames e desenho do rastro.}
+\req{RF14}{Detectar o quique pela inversão do movimento vertical $Y(t)$ e projetar em metros.}{M}{\stpar}{Funcional em vídeos de quadra; requer filtro contra rebates.}
+\req{RF15}{Classificar o quique: dentro/fora da quadra e dentro/fora da zona-foco.}{M}{\stok}{Implementado em \texttt{GameEngine.evaluate\_bounces}.}
+\req{RF16}{Filtrar bolas paradas na quadra para não gerar falsos quiques.}{S}{\stok}{Filtro temporal \texttt{cv2.absdiff} ativo em \texttt{detect\_frame}.}
+\req{RF17}{Filtrar falsos positivos por continuidade espacial e remoção de \textit{spikes}.}{S}{\stpar}{Implementado; ainda sensível a bolas muito distantes.}
+
+\reccat{D. Treino Gamificado, Interface e Análise}
+\req{RF18}{Perfis por nome persistidos em JSON com recuperação de histórico.}{M}{\stok}{Gerenciado por \texttt{StorageManager} (\texttt{profiles.json}).}
+\req{RF19}{Níveis Básico (2 zonas), Médio (3 zonas) e Avançado (matriz $3\times 2$ de 6 zonas).}{M}{\stok}{Três níveis completos operacionais em \texttt{game\_engine.py}.}
+\req{RF20}{Tela de seleção da zona-foco com realce ao passar o mouse (\textit{hover}).}{M}{\stok}{Tela 3 com destaque dinâmico da zona sob o cursor.}
+\req{RF21}{Pontuação gamificada ($+10$ acerto, $-5$ erro, mín. 0) e cálculo de precisão.}{M}{\stok}{Contabilização automática e exibição no placar.}
+\req{RF22}{Tela de visualização com vídeo maior ao centro, painel à esquerda e mini-quadra no canto.}{M}{\stok}{Layout \texttt{100vh} sem rolagem com vídeo HD e mini-quadra.}
+\req{RF23}{Marcadores visuais de quique no vídeo e no mapa 2D (verde = acerto, vermelho = erro).}{M}{\stok}{Círculos numerados com efeito de impacto no vídeo e no mapa.}
+\req{RF24}{Tela de ranking comparando o melhor desempenho dos perfis por nível.}{M}{\stok}{Tabela ordenada por pontuação e precisão na Tela 5.}
+\req{RF25}{Popup ``Vídeo Analisado'' e mapa de densidade indicando onde houve mais acertos e erros.}{S}{\stok}{Modal automático pós-análise e mapa de calor por zona.}
+\req{RF26}{Histórico detalhado de sessões salvo por jogador.}{C}{\stok}{Todas as sessões e eventos ficam salvos em \texttt{profiles.json}.}
+\req{RF27}{Feedback sonoro diferenciando acerto e erro e botão para sair do aplicativo.}{C}{\stok}{Síntese via \textit{Web Audio API} e rota \texttt{/api/shutdown}.}
+
+\reccat{E. Requisitos Não Funcionais e Metas de Desempenho}
+\req{RNF01}{Interface gráfica moderna com tema escuro e aparência profissional.}{M}{\stok}{Interface Web responsiva em tema \textit{dark} (\texttt{style.css}).}
+\req{RNF02}{Taxa de quadros fluida na reprodução de vídeo analisado ($\geq 30\text{ FPS}$) e ao vivo.}{S}{\stpar}{30 FPS atingidos em vídeo analisado; $\approx 10\text{--}12\text{ FPS}$ ao vivo em CPU.}
+\req{RNF03}{Baixa latência entre o quique real na câmera ao vivo e o marcador na tela.}{S}{\stpen}{Atualmente $\approx 450\text{ ms}$ devido ao buffer síncrono do OpenCV.}
+\req{RNF04}{Homografia com erro de reprojeção $\leq 5\text{ px}$ nos 4 cantos calibrados.}{M}{\stok}{Erro de reprojeção verificado de $0{,}00\text{ px}$ nos vértices.}
+\req{RNF05}{Descarte eficaz de bolas paradas no chão durante o rastreamento.}{M}{\stok}{Validado nos vídeos \texttt{quadra\_2} e \texttt{quadra\_3}.}
+\req{RNF06}{Desempenho do modelo YOLO em bolas rápidas e distantes com \textit{motion blur}.}{M}{\stpar}{Bom em meia distância; perde \textit{recall} no fundo da quadra.}
+\req{RNF07}{Distinção precisa entre quique no solo e rebate na raquete do jogador.}{M}{\stpar}{Em ajuste; inversão de $Y$ no rebate ainda gera falsos positivos.}
+\req{RNF08}{Execução 100\% local/offline em Windows 10/11 e Linux.}{M}{\stok}{Servidor local em \texttt{127.0.0.1:8000} sem dependência de nuvem.}
+\req{RNF09}{Arquitetura desacoplada e documentada (\texttt{README.md} com guia Windows/Linux).}{S}{\stok}{Documentação e estrutura modular concluídas.}
+\req{RNF10}{Usabilidade intuitiva: calibração e análise em menos de 1 minuto.}{S}{\stok}{Fluxo guiado em 5 passos e análise instantânea via \texttt{stubs/}.}
+\req{RNF11}{Persistência de dados em arquivos JSON legíveis e estruturados.}{S}{\stok}{Arquivos \texttt{profiles.json} e \texttt{homografia.json}.}
+\req{RNF12}{Bateria de validação sistemática em múltiplos vídeos e ângulos de câmera.}{S}{\stpar}{Validado em 6 vídeos de teste; faltam testes de campo ao vivo.}
+\end{longtable}
+\end{center}
+
+% ============================================================
+\section{Limitações Atuais, Desafios de Calibração e Próximos Passos}
+% ============================================================
+Os testes práticos realizados com vídeos reais de quadra (\texttt{quadra\_1.MOV} a \texttt{quadra\_3.MOV} e \texttt{treino\_1.mp4} a \texttt{treino\_3.mp4}) e com a câmera ao vivo (Iriun Webcam) evidenciaram quatro pontos críticos que ainda demandam calibração e refinamento algorítmico para a Entrega 3:
+
+\subsection{Confusão entre Quique no Solo e Rebate do Jogador}
+Atualmente, o detector de quiques (\texttt{BallTracker.detect\_bounces}) analisa a série temporal da coordenada vertical da bola $Y(t)$ na imagem e identifica os pontos onde ocorre um \textbf{máximo local} (a bola desce com $Y$ crescente nos 3 quadros anteriores e sobe com $Y$ decrescente nos 3 quadros seguintes).
+\begin{itemize}[nosep]
+  \item \textbf{O Problema:} Quando um jogador posicionado na quadra rebate a bola no ar (ou logo após ela cruzar a rede em trajetória descendente), a raquete interrompe a queda da bola e a impulsiona novamente para cima. Do ponto de vista puramente cinemático 2D no eixo $Y$, essa inversão de trajetória causada pelo \textbf{rebate da raquete} possui assinatura semelhante à de um quique no chão, fazendo com que o modelo ocasionalmente contabilize o rebate do jogador como se fosse um quique na quadra.
+  \item \textbf{Calibração Prevista:} Diferenciar os dois eventos combinando: (i)~a verificação de inversão simultânea e abrupta da velocidade horizontal $v_x(t)$ (típica de um rebate devolvido para o outro lado, enquanto no quique no solo a bola mantém o sentido longitudinal da trajetória) e (ii)~a exclusão de inflexões que ocorram próximas à caixa delimitadora do corpo/raquete do jogador.
+\end{itemize}
+
+\subsection{Detecção de Bolas Distantes e Influência da Resolução do Vídeo}
+Nos testes de quadra inteira, observou-se que o modelo \texttt{yolov8\_best\_2.pt} detecta com alta confiança a bola quando ela está na metade da quadra mais próxima à câmera, mas falha com frequência quando a bola viaja para o \textbf{fundo da quadra oposta} (distâncias superiores a $18\text{--}22\text{ m}$).
+\begin{itemize}[nosep]
+  \item \textbf{Efeito da Resolução e do Redimensionamento (\texttt{imgsz=640}):} Mesmo quando o vídeo original é gravado em Full HD ($1920 \times 1080\text{ px}$), uma bola de tênis de $6{,}7\text{ cm}$ de diâmetro a $22\text{ m}$ de distância ocupa apenas cerca de $6 \times 6\text{ pixels}$ na imagem bruta. Como a camada de entrada do YOLOv8 redimensiona o quadro inteiro de $1920\text{ px}$ para $640\text{ px}$ (fator de redução de $3\times$), a bola distante passa a ter \textbf{apenas $2 \times 2\text{ pixels}$} dentro da rede neural, perdendo definição e confundindo-se com as linhas brancas da quadra ou com o ruído de compressão do vídeo.
+  \item \textbf{Trade-off de Resolução vs. Memória e Velocidade:} Gravar e processar em resoluções mais altas (`1080p` ou `4K`) preserva a bola ao longe, mas eleva drasticamente o consumo de memória RAM e o tempo de codificação/transmissão. Por outro lado, reduzir a resolução da câmera para ganhar velocidade no modo ao vivo elimina completamente os pixels da bola no fundo da quadra.
+  \item \textbf{Calibração Prevista:} Implementar o \textbf{recorte dinâmico da Região de Interesse (\textit{ROI Cropping})} baseado nos 4 pontos da homografia: em vez de enviar o quadro inteiro ($1920 \times 1080$ com arquibancadas, grades e céu) para o YOLO, recorta-se apenas a região da meia quadra calibrada antes do redimensionamento para $640\text{ px}$, dobrando a resolução efetiva da bola distante sem custo extra de processamento.
+\end{itemize}
+
+\subsection{Latência na Câmera Ao Vivo e \textit{Motion Blur} perto do Solo}
+No modo de câmera ao vivo via Iriun Webcam, identificou-se um atraso visual de $\approx 0{,}4\text{ a }0{,}6\text{ s}$ e perda de detecção no instante exato em que a bola toca o chão em ambientes internos:
+\begin{enumerate}[nosep]
+  \item \textbf{Fila de Buffer do OpenCV:} O \texttt{cv2.VideoCapture} acumula de 3 a 5 quadros antigos num buffer interno enquanto aguarda a conclusão síncrona da inferência do YOLO em CPU, reduzindo a taxa efetiva de amostragem para $\approx 10\text{ FPS}$. Em baixo FPS, o ciclo rápido de descida e subida do quique pode ocorrer entre dois quadros amostrados.
+  \item \textbf{Borrão de Movimento (\textit{Motion Blur}):} No topo da parábola a bola desacelera e aparece nítida (sendo facilmente detectada), porém no momento do impacto com o chão ela atinge sua velocidade máxima, gerando um rastro alongado e translúcido caso o tempo de exposição da câmera do celular esteja alto.
+  \item \textbf{Plano de Ação Estruturado:} Foi elaborado o plano técnico em 4 fases (\texttt{docs/plano\_acao\_latencia\_video.md}) prevendo: (i)~uma \textit{thread} dedicada de leitura contínua (\textit{Zero-Buffer}) para descartar quadros atrasados; (ii)~desacoplamento entre a \textit{thread} de exibição do vídeo a $30\text{ FPS}$ e a \textit{thread} de inferência YOLO; (iii)~exportação do modelo para \textbf{ONNX Runtime / FP16}; e (iv)~uso do Iriun via cabo USB com obturador rápido na câmera do smartphone.
+\end{enumerate}
+
+% ============================================================
+\section{Cronograma Atualizado até a Entrega Final}
+% ============================================================
+A Tabela~\ref{tab:gantt} apresenta o cronograma atualizado do projeto, destacando as etapas concluídas até a Entrega 2 (S11) e o planejamento focado em calibração fina e redução de latência até a Entrega 3 (S17).
+
+\begin{table}[H]
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.22}
+\setlength{\tabcolsep}{3.5pt}
+\caption{Cronograma de execução do Top Training (Semanas S8 a S17).}
+\label{tab:gantt}
+\begin{tabularx}{\textwidth}{X *{10}{c}}
+\toprule
+\textbf{Atividade} & \textbf{S8} & \textbf{S9} & \textbf{S10} & \textbf{S11} & \textbf{S12} & \textbf{S13} & \textbf{S14} & \textbf{S15} & \textbf{S16} & \textbf{S17} \\
+\midrule
+Definição do novo escopo, requisitos e arquitetura & \cellcolor{ganttgreen} & \cellcolor{ganttgreen} & & & & & & & & \\
+\rowcolor{rowgray}
+Treinamento do YOLOv8 no Google Colab (\texttt{yolov8\_best\_2.pt}) & & \cellcolor{ganttgreen} & \cellcolor{ganttgreen} & & & & & & & \\
+Pipeline de rastreamento, interpolação e detecção de quiques & & & \cellcolor{ganttgreen} & \cellcolor{ganttgreen} & & & & & & \\
+\rowcolor{rowgray}
+Aplicativo Web (FastAPI + JS): calibração, zonas, popup e ranking & & & \cellcolor{ganttgreen} & \cellcolor{ganttgreen} & & & & & & \\
+\textbf{Marco: Entrega 2 (Apresentação e Relatório)} & & & & \cellcolor{ganttorange}\textbf{E2} & & & & & & \\
+\rowcolor{rowgray}
+Recorte de ROI da quadra p/ detectar bolas distantes & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & & \\
+Filtro cinemático p/ separar quique no chão de rebate do jogador & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & & \\
+\rowcolor{rowgray}
+Otimização de latência ao vivo (\textit{Zero-Buffer} + ONNX) & & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \cellcolor{ganttblue} & & \\
+Validação experimental em quadra e métricas finais & & & & & & & & \cellcolor{ganttblue} & \cellcolor{ganttblue} & \\
+\rowcolor{rowgray}
+Relatório final e apresentação da Entrega 3 & & & & & & & & & \cellcolor{ganttblue} & \cellcolor{ganttgreen}\textbf{E3} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}
+
