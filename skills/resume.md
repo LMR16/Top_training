@@ -8,7 +8,7 @@
 
 O **Top Training** é um sistema de treinamento gamificado de tênis por visão computacional.
 - **Motor de Visão Computacional (`trackers/` + `main.py`):** Detecção de bolas de tênis em movimento usando **YOLOv8 (`yolov8_best_2.pt`)**, filtro de movimento real (`cv2.absdiff`) para ignorar bolas paradas no chão, continuidade espacial, interpolação controlada via `pandas` e detecção automática do instante do quique (*bounce*) pela inversão da trajetória vertical $Y$.
-- **Aplicação Web/Desktop (`app/`):** Interface em **HTML5 / CSS3 / JavaScript Puro** (Tema Escuro Esportivo estilo SwingVision) conectada ao back-end Python (**FastAPI**), com suporte a vídeos gravados e câmera ao vivo (**Iriun Webcam**), calibração interativa de 4 pontos com homografia $H$ (pixel $\rightarrow$ metros), validação de homografia (`UC09`), níveis de dificuldade (Básico 2 zonas, Médio 3 colunas, Avançado grade $3\times 2$), seleção de zona-foco, placar em tempo real com filtro de 1º quique, feedback sonoro/visual e ranking por nível salvo em JSON.
+- **Aplicação Web/Desktop (`app/`):** Interface em **HTML5 / CSS3 / JavaScript Puro** (Tema Escuro Esportivo estilo SwingVision, janela `100vh` sem barra de rolagem global) conectada ao back-end Python (**FastAPI**), com suporte a análise completa de vídeos gravados (com barra de progresso, popup automático **"Vídeo Analisado!"**, reprodutor grande com rastro da bola + salto rápido para quiques e mini-quadra 2D com mapa de calor de acertos/erros no canto direito) e câmera ao vivo (**Iriun Webcam / USB** em threads desacopladas), além de calibração interativa de 4 pontos com homografia $H$ (pixel $\rightarrow$ metros), validação de homografia (`UC09`), níveis de dificuldade (Básico 2 zonas, Médio 3 colunas, Avançado grade $3\times 2$), seleção de zona-foco, placar com filtro de 1º quique, feedback sonoro/visual, botão de encerramento seguro (`🚪 Sair do App`) e ranking por nível salvo em JSON.
 
 ---
 
@@ -20,23 +20,23 @@ Top_training/
 ├── yolo_inference.py               # [CLI] Script de teste rápido de inferência/tracking do YOLO
 ├── video_to_frame.py               # [CLI] Extrator de frames de vídeos para anotação no Roboflow
 ├── requirements.txt                # Dependências do projeto (OpenCV, Ultralytics, Pandas, FastAPI, Uvicorn)
-├── README.md                       # Apresentação geral do repositório
+├── README.md                       # Apresentação geral dos 2 subprojetos (App Web + CLI) e guia Windows/Linux
 │
 ├── app/                            # [APP] Aplicativo completo (Front-end JS + Back-end Python FastAPI)
 │   ├── __init__.py
-│   ├── app_main.py                 # Servidor FastAPI (porta 8000), streaming MJPEG e abertura automática no navegador
+│   ├── app_main.py                 # Servidor FastAPI (porta 8000), análise em lote c/ seek, stream MJPEG e /api/shutdown
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── homography.py           # Calibração de 4 pontos, matriz H (pixel <-> metros) e erro de reprojeção
-│   │   ├── game_engine.py          # Zonas (Básico=2, Médio=3, Avançado=6), pontuação (+10/-5) e filtro de 1º quique
+│   │   ├── game_engine.py          # Zonas (Básico=2, Médio=3, Avançado=6), pontuação (+10/-5), zone_stats e filtro de 1º quique
 │   │   └── storage.py              # Persistência JSON de perfis, histórico de sessões, ranking e homografia
 │   ├── data/
 │   │   ├── homografia.json         # Calibração de 4 pontos persistida
 │   │   └── profiles.json           # Perfis de jogadores e sessões salvas
 │   └── static/
-│       ├── index.html              # SPA com as 5 telas (Perfil/Fonte, Calibração, Zona-Foco, Treino, Resumo/Ranking)
-│       ├── style.css               # Estilização Dark Mode Esportivo
-│       └── app.js                  # Canvas 2D interativo, arraste de 4 pontos, WebAudio API e atualização ao vivo
+│       ├── index.html              # SPA com as 5 telas + Modal Popup "Vídeo Analisado!" + Botão Sair do App
+│       ├── style.css               # Estilização Dark Mode Esportivo (100vh zero-scroll, layout 3 colunas no treino)
+│       └── app.js                  # Canvas 2D interativo, heatmap de zonas, seek de quiques, WebAudio API e polling
 │
 ├── trackers/                       # [CV] Pacote central de rastreamento e detecção de quiques
 │   ├── __init__.py
@@ -62,15 +62,19 @@ Top_training/
 │
 ├── docs/                           # Documentação do projeto
 │   ├── arquitetura_app_js.md       # Especificação das 20 decisões do App JS + FastAPI e Trabalhos Futuros (Smartwatch)
+│   ├── plano_acao_latencia_video.md # Plano de ação técnico para redução de latência e transmissão de vídeo
 │   ├── Entrega_2/
-│   │   ├── Projeto_integrador_rel_1 (1).tex
+│   │   ├── PI_entrega_2.tex                 # Relatório LaTeX atualizado (Entrega 2) com foco no App, Colab, Casos de Uso e Sequência
+│   │   ├── Projeto_integrador_rel_1 (1).tex # Versão anterior do relatório
 │   │   ├── Projeto_integrador_rel_1 (1).pdf
-│   │   ├── Projeto_integrador_rel_1.md      # Transcrição completa do relatório em Markdown
-│   │   └── requisitos_status.png            # Imagem 16:9 de status dos requisitos para apresentação no Canva
+│   │   ├── Projeto_integrador_rel_1.md      # Transcrição do relatório 1 em Markdown
+│   │   ├── requisitos_status.png            # Imagem 16:9 de status dos requisitos
+│   │   └── img/                             # Figuras da interface e do treino para compilação do LaTeX
 │   ├── escopo.md, arquitetura.md, roteiro.md, treino_modelo.md
 │
 └── skills/
-    └── resume.md                   # Este arquivo de referência rápida
+    ├── resume.md                   # Este arquivo de referência rápida geral do projeto
+    └── interface_app.md            # Especificação detalhada da interface gráfica atual (5 telas, modal, canvas 2D e rotas)
 ```
 
 ---
