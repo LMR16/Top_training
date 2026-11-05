@@ -487,6 +487,18 @@
             "score_after": 0
           }
         ]
+      },
+      {
+        "date": "05/11/2026 08:17",
+        "level": "basico",
+        "target_zone": 0,
+        "source": "camera:0",
+        "score": 0,
+        "hits": 0,
+        "misses": 0,
+        "total_shots": 0,
+        "accuracy": 0.0,
+        "events": []
       }
     ]
   },
