@@ -158,3 +158,6 @@ src/data/sessions/*.json
 # Local config
 config.yaml
 config.json
+
+
+!yolov8_best_2.pt

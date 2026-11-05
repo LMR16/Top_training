@@ -60,12 +60,12 @@ class BallTracker:
             
     #     return ball_dict
 
-    def detect_frame(self, frame, curr_gray=None, prev_gray=None, last_center=None, frames_since_last=999):
-        # Executa a deteção em imgsz=640 (resolução nativa do treino do yolov8_best_2.pt)
+    def detect_frame(self, frame, curr_gray=None, prev_gray=None, last_center=None, frames_since_last=999, imgsz=640):
+        # Executa a deteção em imgsz=640 (resolução nativa do treino do yolov8_best_2.pt) ou 480 no modo ao vivo
         results = self.model.predict(
             frame,
             conf=0.15,
-            imgsz=640,
+            imgsz=imgsz,
             verbose=False
         )[0]
         

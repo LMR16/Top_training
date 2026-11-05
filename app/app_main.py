@@ -53,6 +53,24 @@ def get_tracker() -> BallTracker:
         return _tracker_instance
 
 
+def _open_camera_low_latency(cam_idx: int) -> cv2.VideoCapture:
+    """Abre a câmera com DirectShow no Windows e buffer de 1 quadro para eliminar atraso acumulado."""
+    if os.name == "nt":
+        cap = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap = cv2.VideoCapture(cam_idx)
+    else:
+        cap = cv2.VideoCapture(cam_idx)
+
+    if cap.isOpened():
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cap.set(cv2.CAP_PROP_FPS, 30)
+    return cap
+
+
 def list_input_videos() -> list:
     vid_dir = os.path.join(ROOT_DIR, "src", "input_videos")
     if not os.path.exists(vid_dir):
@@ -164,7 +182,7 @@ def api_init():
 def api_frame_snapshot(source_type: str = "video", source_id: str = ""):
     if source_type == "camera":
         cam_idx = int(source_id) if str(source_id).isdigit() else 0
-        cap = cv2.VideoCapture(cam_idx)
+        cap = _open_camera_low_latency(cam_idx)
     else:
         videos = list_input_videos()
         vid_name = source_id if source_id in videos else (videos[0] if videos else "")
@@ -423,7 +441,6 @@ def _run_video_session(req: StartTrainingRequest):
         t0 = time.time()
         ret, frame = cap.read()
         if not ret or frame is None or curr_idx >= total_frames:
-            # Reinicia o loop de visualização
             curr_idx = start_idx
             cap.set(cv2.CAP_PROP_POS_FRAMES, curr_idx)
             continue
@@ -456,15 +473,14 @@ def _run_video_session(req: StartTrainingRequest):
                 (0, 255, 255), 2
             )
 
-        # Desenha todos os quiques no vídeo (destacando com efeito de onda quando o frame passa pelo quique)
+        # Desenha todos os quiques no vídeo
         for e in all_events:
             u = int(e["pixel_u"] * sx)
             v = int(e["pixel_v"] * sy)
             is_hit = e["is_hit"]
-            color = (118, 230, 0) if is_hit else (60, 60, 255)  # BGR
+            color = (118, 230, 0) if is_hit else (60, 60, 255)
             diff_f = curr_idx - e["frame"]
 
-            # Mostra todos os quiques suavemente ou destaca os já ocorridos
             if diff_f >= -5:
                 cv2.circle(vis, (u, v), 11, color, 2, cv2.LINE_AA)
                 cv2.circle(vis, (u, v), 4, color, -1, cv2.LINE_AA)
@@ -478,7 +494,6 @@ def _run_video_session(req: StartTrainingRequest):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 1, cv2.LINE_AA
                 )
 
-            # Efeito de impacto no momento do quique
             if 0 <= diff_f <= 20:
                 ripple_r = 14 + diff_f * 2
                 cv2.circle(vis, (u, v), ripple_r, color, 2, cv2.LINE_AA)
@@ -501,8 +516,15 @@ def _run_video_session(req: StartTrainingRequest):
 
 
 def _run_camera_session(req: StartTrainingRequest):
+    """
+    Arquitetura Produtor-Consumidor (2 Threads) para Câmera Ao Vivo:
+      - Thread Principal (Produtor / Stream 30 FPS): Lê frames continuamente com buffer=1
+        e transmite o vídeo liso sem esperar a CPU terminar a inferência do YOLO.
+      - Thread Secundária (Consumidor / Worker YOLO): Pega sempre o quadro mais recente,
+        executa o YOLO em imgsz=480 e avalia quiques numa janela deslizante curta (40 frames).
+    """
     cam_idx = int(req.source_id) if str(req.source_id).isdigit() else 0
-    cap = cv2.VideoCapture(cam_idx)
+    cap = _open_camera_low_latency(cam_idx)
     if not cap.isOpened():
         with training_state.lock:
             training_state.status_msg = f"Não foi possível abrir a Câmera {cam_idx}."
@@ -511,78 +533,179 @@ def _run_camera_session(req: StartTrainingRequest):
         return
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    tracker = get_tracker()
-    prev_gray = None
-    last_center = None
-    last_det_idx = -999
-    detections_history = []
-    idx = 0
+    if fps <= 1.0 or fps > 120.0:
+        fps = 30.0
 
     with training_state.lock:
         training_state.fps = fps
         training_state.analyzing = False
         training_state.analysis_done = False
-        training_state.status_msg = f"Capturando ao vivo (Câmera {cam_idx})..."
+        training_state.status_msg = f"Ao vivo a 30 FPS (Câmera {cam_idx}) — Inicializando YOLO..."
+
+    cam_lock = threading.Lock()
+    cam_shared = {
+        "latest_frame": None,
+        "frame_seq": 0,
+        "last_bbox": None,
+        "last_det_time": 0.0,
+        "yolo_fps": 0.0,
+        "running": True
+    }
+
+    def _yolo_live_worker():
+        tracker = get_tracker()
+        with training_state.lock:
+            if not training_state.stop_requested:
+                training_state.status_msg = f"Capturando ao vivo (Câmera {cam_idx})..."
+
+        prev_gray = None
+        last_center = None
+        last_det_seq = -999
+        last_processed_seq = -1
+
+        # Janela deslizante curta (máx. 40 detecções) para manter o Pandas instantâneo (< 1 ms)
+        WINDOW_SIZE = 40
+        detections_window = []
+        yolo_step_idx = 0
+        accumulated_bounces = []
+        last_bounce_step = -999
+
+        while not training_state.stop_requested and cam_shared["running"]:
+            with cam_lock:
+                frame_ref = cam_shared["latest_frame"]
+                seq = cam_shared["frame_seq"]
+
+            if frame_ref is None or seq == last_processed_seq:
+                time.sleep(0.005)
+                continue
+
+            t_y0 = time.perf_counter()
+            work_frame = frame_ref.copy()
+            last_processed_seq = seq
+
+            curr_gray = cv2.cvtColor(work_frame, cv2.COLOR_BGR2GRAY)
+            frames_gap = max(1, yolo_step_idx - last_det_seq)
+            ball_dict = tracker.detect_frame(
+                work_frame,
+                curr_gray=curr_gray,
+                prev_gray=prev_gray,
+                last_center=last_center,
+                frames_since_last=frames_gap,
+                imgsz=480
+            )
+            prev_gray = curr_gray
+            yolo_step_idx += 1
+
+            now_t = time.time()
+            dt_yolo = max(0.001, time.perf_counter() - t_y0)
+
+            with cam_lock:
+                cam_shared["yolo_fps"] = round(1.0 / dt_yolo, 1)
+                if 1 in ball_dict:
+                    x1, y1, x2, y2 = ball_dict[1]
+                    last_center = ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
+                    last_det_seq = yolo_step_idx
+                    cam_shared["last_bbox"] = [x1, y1, x2, y2]
+                    cam_shared["last_det_time"] = now_t
+                elif (now_t - cam_shared["last_det_time"]) > 0.35:
+                    cam_shared["last_bbox"] = None
+
+            detections_window.append(ball_dict)
+            if len(detections_window) > WINDOW_SIZE:
+                detections_window.pop(0)
+
+            # Avalia quiques apenas sobre a janela deslizante de 40 itens
+            if len(detections_window) >= 9 and yolo_step_idx % 2 == 0:
+                interp = tracker.interpolate_ball_positions(detections_window, max_gap=6)
+                window_bounces = tracker.detect_bounces(interp, min_drop_px=5.0, min_rise_px=4.0, cooldown_frames=6)
+                offset = yolo_step_idx - len(detections_window)
+                new_bounce_added = False
+                for wb in window_bounces:
+                    global_step = offset + int(wb["frame"])
+                    if (global_step - last_bounce_step) >= 8:
+                        last_bounce_step = global_step
+                        accumulated_bounces.append({
+                            "frame": int(seq),
+                            "x": wb["x"],
+                            "y": wb["y"]
+                        })
+                        new_bounce_added = True
+
+                if new_bounce_added:
+                    eval_result = game_engine.evaluate_bounces(
+                        accumulated_bounces, fps, req.level, req.target_zone, is_video_mode=False
+                    )
+                    with training_state.lock:
+                        training_state.hits = eval_result["hits"]
+                        training_state.misses = eval_result["misses"]
+                        training_state.score = eval_result["score"]
+                        training_state.accuracy = eval_result["accuracy"]
+                        training_state.events = eval_result["events"]
+                        training_state.zone_stats = eval_result["zone_stats"]
+                        training_state.most_hits_summary = eval_result["most_hits_summary"]
+                        training_state.most_misses_summary = eval_result["most_misses_summary"]
+
+    yolo_thread = threading.Thread(target=_yolo_live_worker, daemon=True)
+    yolo_thread.start()
+
+    idx = 0
+    out_w, out_h = 854, 480
 
     while not training_state.stop_requested:
         ret, frame = cap.read()
         if not ret or frame is None:
-            time.sleep(0.02)
+            time.sleep(0.01)
             continue
 
         h, w = frame.shape[:2]
         if idx == 0:
             _ensure_default_calibration(w, h)
 
-        curr_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        ball_dict = tracker.detect_frame(
-            frame,
-            curr_gray=curr_gray,
-            prev_gray=prev_gray,
-            last_center=last_center,
-            frames_since_last=(idx - last_det_idx)
-        )
-        if 1 in ball_dict:
-            x1, y1, x2, y2 = ball_dict[1]
-            last_center = ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
-            last_det_idx = idx
-
-        detections_history.append(ball_dict)
-        prev_gray = curr_gray
         idx += 1
+        with cam_lock:
+            cam_shared["latest_frame"] = frame
+            cam_shared["frame_seq"] = idx
+            active_bbox = cam_shared["last_bbox"]
 
-        if idx >= 10 and idx % 3 == 0:
-            interp = tracker.interpolate_ball_positions(detections_history, max_gap=8)
-            raw_bounces = tracker.detect_bounces(interp)
-            eval_result = game_engine.evaluate_bounces(raw_bounces, fps, req.level, req.target_zone, is_video_mode=False)
-            with training_state.lock:
-                training_state.hits = eval_result["hits"]
-                training_state.misses = eval_result["misses"]
-                training_state.score = eval_result["score"]
-                training_state.accuracy = eval_result["accuracy"]
-                training_state.events = eval_result["events"]
-                training_state.zone_stats = eval_result["zone_stats"]
-                training_state.most_hits_summary = eval_result["most_hits_summary"]
-                training_state.most_misses_summary = eval_result["most_misses_summary"]
-
-        out_w, out_h = 854, 480
         sx, sy = out_w / float(w), out_h / float(h)
         vis = cv2.resize(frame, (out_w, out_h))
+
         poly_pts = np.array(
             [[int(p[0] * sx), int(p[1] * sy)] for p in homography.pixel_points],
             dtype=np.int32
         ).reshape((-1, 1, 2))
-        cv2.polylines(vis, [poly_pts], isClosed=True, color=(255, 190, 40), thickness=2)
-        if 1 in ball_dict:
-            x1, y1, x2, y2 = ball_dict[1]
-            cv2.circle(vis, (int(((x1 + x2) / 2) * sx), int(((y1 + y2) / 2) * sy)), 7, (0, 255, 100), -1)
+        cv2.polylines(vis, [poly_pts], isClosed=True, color=(255, 190, 40), thickness=2, lineType=cv2.LINE_AA)
 
-        ok, buf = cv2.imencode(".jpg", vis, [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+        # Desenha a posição mais recente da bola calculada pela thread YOLO
+        if active_bbox is not None:
+            x1, y1, x2, y2 = active_bbox
+            cx, cy = int(((x1 + x2) / 2.0) * sx), int(((y1 + y2) / 2.0) * sy)
+            cv2.circle(vis, (cx, cy), 8, (0, 255, 100), -1, cv2.LINE_AA)
+            cv2.rectangle(
+                vis,
+                (int(x1 * sx), int(y1 * sy)),
+                (int(x2 * sx), int(y2 * sy)),
+                (0, 255, 255), 2
+            )
+
+        # Desenha quiques já confirmados na sessão ao vivo
+        with training_state.lock:
+            live_events = list(training_state.events)
+
+        for e in live_events:
+            u = int(e["pixel_u"] * sx)
+            v = int(e["pixel_v"] * sy)
+            color = (118, 230, 0) if e["is_hit"] else (60, 60, 255)
+            cv2.circle(vis, (u, v), 10, color, 2, cv2.LINE_AA)
+            cv2.circle(vis, (u, v), 4, color, -1, cv2.LINE_AA)
+
+        ok, buf = cv2.imencode(".jpg", vis, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
         with training_state.lock:
             training_state.current_frame_idx = idx
             if ok:
                 training_state.latest_jpeg = buf.tobytes()
 
+    cam_shared["running"] = False
     cap.release()
     with training_state.lock:
         training_state.active = False
@@ -674,18 +797,20 @@ def api_training_status():
 
 
 def _mjpeg_generator():
+    last_sent_jpg = None
     while True:
         with training_state.lock:
             jpg = training_state.latest_jpeg
             active = training_state.active
-        if jpg:
+        if jpg is not None and jpg is not last_sent_jpg:
+            last_sent_jpg = jpg
             yield (
                 b"--frame\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
             )
         if not active and jpg is not None:
             break
-        time.sleep(0.033)
+        time.sleep(0.015)
 
 
 @app.get("/api/training/video_feed")
