@@ -1,6 +1,9 @@
-// Estado Global do Front-end Top Training
+// Estado Global — Top Training (Stealth Dark Minimal)
 const state = {
+  currentView: "profile",
   player: "Lukas",
+  profiles: [],
+  profilesMeta: {},
   level: "basico",
   targetZone: 0,
   hoveredZone: -1,
@@ -37,7 +40,7 @@ const state = {
   lastStatus: null
 };
 
-// ==================== WEB AUDIO API (FEEDBACK SONORO RF27) ====================
+// ==================== WEB AUDIO API (FEEDBACK SONORO) ====================
 let audioCtx = null;
 function playFeedbackBeep(isHit) {
   if (!state.soundEnabled) return;
@@ -52,7 +55,7 @@ function playFeedbackBeep(isHit) {
     } else {
       osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.22);
     }
-    gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.24);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -64,12 +67,14 @@ function playFeedbackBeep(isHit) {
 function toggleSound() {
   state.soundEnabled = !state.soundEnabled;
   const btn = document.getElementById("btn-sound");
-  btn.textContent = state.soundEnabled ? "🔊 Som: ON" : "🔇 Som: OFF";
+  if (btn) {
+    btn.textContent = state.soundEnabled ? "Som: ON" : "Som: OFF";
+  }
 }
 
 // ==================== BOTÃO SAIR DO APLICATIVO ====================
 async function exitApplication() {
-  if (!confirm("Deseja realmente encerrar o servidor e sair do aplicativo Top Training?")) {
+  if (!confirm("Deseja encerrar o aplicativo Top Training?")) {
     return;
   }
   if (state.pollTimer) {
@@ -81,10 +86,10 @@ async function exitApplication() {
   } catch (e) {}
 
   document.body.innerHTML = `
-    <div style="width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0b141e;color:#f0f6fc;text-align:center;padding:24px;">
-      <div style="font-size:3rem;margin-bottom:12px;">🎾</div>
-      <h1 style="color:#00e676;margin-bottom:8px;">Aplicativo Encerrado com Sucesso</h1>
-      <p style="color:#93acc5;max-width:460px;">O servidor local do Top Training foi desligado com segurança. Você já pode fechar esta guia do navegador.</p>
+    <div style="width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#09090b;color:#fafafa;text-align:center;padding:24px;font-family:Inter,sans-serif;">
+      <div style="width:12px;height:12px;border-radius:50%;background:#10b981;margin-bottom:18px;box-shadow:0 0 16px #10b981;"></div>
+      <h2 style="font-weight:700;margin-bottom:8px;">Sessão Encerrada</h2>
+      <p style="color:#a1a1aa;font-size:0.9rem;max-width:380px;">O servidor local foi desligado com segurança. Você já pode fechar esta guia.</p>
     </div>
   `;
   setTimeout(() => {
@@ -98,77 +103,181 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupZoneCanvasEvents();
   await fetchInitData();
   drawZoneSelectionCourt();
+  switchView("profile");
 });
 
 async function fetchInitData() {
   const res = await fetch("/api/init");
   const data = await res.json();
 
+  state.profiles = data.profiles || [];
+  state.profilesMeta = data.profiles_meta || {};
   state.homography = data.homography;
   state.zones = data.zones;
   state.ranking = data.ranking;
 
-  // Preenche dropdown de perfis
-  const profSel = document.getElementById("select-existing-profile");
-  profSel.innerHTML = `<option value="">-- Novo Jogador / Digitar Abaixo --</option>`;
-  data.profiles.forEach(p => {
-    const opt = document.createElement("option");
-    opt.value = p;
-    opt.textContent = p;
-    profSel.appendChild(opt);
-  });
+  renderProfileSelectionUI();
 
   // Preenche dropdown de vídeos
   const vidSel = document.getElementById("select-video-file");
-  vidSel.innerHTML = "";
-  data.videos.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v;
-    opt.textContent = v;
-    vidSel.appendChild(opt);
-  });
-  if (data.videos.length > 0) {
-    state.sourceId = data.videos[0];
+  if (vidSel) {
+    vidSel.innerHTML = "";
+    (data.videos || []).forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      vidSel.appendChild(opt);
+    });
+    if (data.videos && data.videos.length > 0) {
+      state.sourceId = data.videos[0];
+    }
   }
 
   // Preenche dropdown de câmeras
   const camSel = document.getElementById("select-camera-index");
-  camSel.innerHTML = "";
-  data.cameras.forEach(c => {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = c.label;
-    camSel.appendChild(opt);
-  });
+  if (camSel) {
+    camSel.innerHTML = "";
+    (data.cameras || []).forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.label;
+      camSel.appendChild(opt);
+    });
+  }
 
-  updateSetupCalibBanner();
+  updateHubCalibrationBadge();
   renderRankingTable();
 }
 
-function updateSetupCalibBanner() {
-  const el = document.getElementById("setup-calib-status");
-  if (state.homography && state.homography.calibrated) {
-    el.innerHTML = `✅ <strong>Quadra Calibrada</strong> (Erro de reprojeção: ${state.homography.reproj_error_px} px)`;
-    el.style.borderColor = "#00b35f";
-  } else {
-    el.innerHTML = `⚠️ <strong>Quadra ainda não calibrada</strong> — Clique em "Calibrar Quadra" ou use o mapeamento padrão.`;
-    el.style.borderColor = "#f5b919";
+function renderProfileSelectionUI() {
+  const chipsWrap = document.getElementById("profile-chips-list");
+  const section = document.getElementById("existing-profiles-section");
+  const profSel = document.getElementById("select-existing-profile");
+
+  if (!state.profiles || state.profiles.length === 0) {
+    if (section) section.style.display = "none";
+    return;
+  }
+
+  if (section) section.style.display = "flex";
+
+  if (chipsWrap) {
+    chipsWrap.innerHTML = state.profiles
+      .map(p => {
+        const isCurrent = p.toLowerCase() === (state.player || "").toLowerCase();
+        return `<button type="button" class="profile-chip ${isCurrent ? 'active' : ''}" onclick="selectProfileChip('${p.replace(/'/g, "\\'")}')">${p}</button>`;
+      })
+      .join("");
+  }
+
+  if (profSel) {
+    profSel.innerHTML = `<option value="">Novo jogador</option>`;
+    state.profiles.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p;
+      profSel.appendChild(opt);
+    });
   }
 }
 
-// ==================== NAVEGAÇÃO ENTRE TELAS ====================
+function selectProfileChip(name) {
+  state.player = name;
+  const input = document.getElementById("input-player-name");
+  if (input) input.value = name;
+  renderProfileSelectionUI();
+}
+
+function onSelectProfileDropdown() {
+  const val = document.getElementById("select-existing-profile").value;
+  if (val) {
+    selectProfileChip(val);
+  }
+}
+
+async function confirmProfileAndEnterHub() {
+  const input = document.getElementById("input-player-name");
+  const cleanName = (input && input.value.trim()) ? input.value.trim() : "Jogador";
+  state.player = cleanName;
+
+  try {
+    const res = await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: cleanName })
+    });
+    if (res.ok) {
+      const d = await res.json();
+      state.player = d.player;
+      state.profiles = d.profiles || state.profiles;
+      state.profilesMeta = d.profiles_meta || state.profilesMeta;
+      renderProfileSelectionUI();
+    }
+  } catch (e) {}
+
+  updateHubView();
+  switchView("hub");
+}
+
+function updateHubView() {
+  const titleEl = document.getElementById("hub-title-player");
+  const hudName = document.getElementById("hud-player-name");
+  const sessEl = document.getElementById("hub-stat-sessions");
+  const bestEl = document.getElementById("hub-stat-best");
+
+  if (titleEl) titleEl.textContent = state.player;
+  if (hudName) hudName.textContent = state.player;
+
+  const meta = state.profilesMeta[state.player] || { sessions_count: 0, best_score: 0 };
+  if (sessEl) sessEl.textContent = meta.sessions_count;
+  if (bestEl) bestEl.textContent = `${meta.best_score} pts`;
+
+  updateHubCalibrationBadge();
+}
+
+function updateHubCalibrationBadge() {
+  const badge = document.getElementById("hub-calib-badge");
+  if (!badge) return;
+  if (state.homography && state.homography.calibrated) {
+    badge.textContent = "Calibrada";
+    badge.className = "status-tag ok";
+  } else {
+    badge.textContent = "Padrão";
+    badge.className = "status-tag pending";
+  }
+}
+
+// ==================== NAVEGAÇÃO FLUIDA DE FOCO ÚNICO ====================
 function switchView(viewName) {
+  state.currentView = viewName;
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-  document.querySelectorAll(".nav-btn").forEach(b => {
-    b.classList.toggle("active", b.dataset.view === viewName);
-  });
 
   const target = document.getElementById(`view-${viewName}`);
   if (target) target.classList.add("active");
 
-  state.player = document.getElementById("input-player-name").value.trim() || "Jogador";
+  // Fundo: Vivo no início/hub, escurecido (93%) nas telas de quadra/vídeo
+  const vividViews = ["profile", "hub"];
+  document.body.classList.toggle("bg-vivid", vividViews.includes(viewName));
+  document.body.classList.toggle("bg-dimmed", !vividViews.includes(viewName));
 
-  if (viewName === "calibrate") {
+  // Controles de canto
+  const backBtn = document.getElementById("btn-global-back");
+  const playerPill = document.getElementById("hud-player-pill");
+  if (backBtn) {
+    backBtn.style.display = viewName === "profile" ? "none" : "inline-flex";
+  }
+  if (playerPill) {
+    playerPill.style.display = viewName === "profile" ? "none" : "inline-flex";
+    document.getElementById("hud-player-name").textContent = state.player;
+  }
+
+  if (viewName === "hub") {
+    fetch("/api/init").then(r => r.json()).then(d => {
+      state.profilesMeta = d.profiles_meta || {};
+      state.homography = d.homography || state.homography;
+      updateHubView();
+    }).catch(() => {});
+  } else if (viewName === "calibrate") {
     if (!state.calibImg) loadCalibrationSnapshot();
   } else if (viewName === "zone") {
     updateZoneSelectionLabels();
@@ -178,40 +287,55 @@ function switchView(viewName) {
     fetch("/api/ranking").then(r => r.json()).then(rk => {
       state.ranking = rk;
       renderRankingTable();
-    });
+    }).catch(() => {});
   }
 }
 
-function onSelectProfileDropdown() {
-  const val = document.getElementById("select-existing-profile").value;
-  if (val) {
-    document.getElementById("input-player-name").value = val;
-    state.player = val;
+async function navigateBack() {
+  if (state.currentView === "training") {
+    await stopTrainingSession();
+    if (state.pollTimer) {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+    }
+    switchView("zone");
+  } else if (state.currentView === "zone" || state.currentView === "calibrate" || state.currentView === "summary") {
+    switchView("hub");
+  } else if (state.currentView === "hub") {
+    switchView("profile");
   }
 }
 
-function onSourceTypeChange() {
-  const selected = document.querySelector('input[name="source_type"]:checked').value;
-  state.sourceType = selected;
-  document.getElementById("lbl-src-video").classList.toggle("active", selected === "video");
-  document.getElementById("lbl-src-camera").classList.toggle("active", selected === "camera");
-  document.getElementById("video-select-box").style.display = selected === "video" ? "block" : "none";
-  document.getElementById("camera-select-box").style.display = selected === "camera" ? "block" : "none";
+function setSourceType(type) {
+  state.sourceType = type;
+  const btnVid = document.getElementById("seg-src-video");
+  const btnCam = document.getElementById("seg-src-camera");
+  if (btnVid) btnVid.classList.toggle("active", type === "video");
+  if (btnCam) btnCam.classList.toggle("active", type === "camera");
+
+  const vidBox = document.getElementById("video-select-box");
+  const camBox = document.getElementById("camera-select-box");
+  if (vidBox) vidBox.style.display = type === "video" ? "block" : "none";
+  if (camBox) camBox.style.display = type === "camera" ? "block" : "none";
 }
 
 function getSelectedSourceId() {
   if (state.sourceType === "camera") {
-    return document.getElementById("select-camera-index").value || "0";
+    const el = document.getElementById("select-camera-index");
+    return (el && el.value) ? el.value : "0";
   }
-  return document.getElementById("select-video-file").value || "";
+  const el = document.getElementById("select-video-file");
+  return (el && el.value) ? el.value : "";
 }
 
 function selectLevel(lvl) {
   state.level = lvl;
   state.targetZone = 0;
-  document.querySelectorAll(".level-card").forEach(c => {
+  document.querySelectorAll(".level-pill").forEach(c => {
     c.classList.toggle("active", c.dataset.level === lvl);
   });
+  updateZoneSelectionLabels();
+  drawZoneSelectionCourt();
 }
 
 function goToCalibration() {
@@ -219,11 +343,11 @@ function goToCalibration() {
   switchView("calibrate");
 }
 
-// ==================== TELA 2: CALIBRAÇÃO DE 4 PONTOS E HOMOGRAFIA ====================
+// ==================== CALIBRAÇÃO DE 4 PONTOS E HOMOGRAFIA ====================
 async function loadCalibrationSnapshot() {
   const srcId = getSelectedSourceId();
   const info = document.getElementById("calib-instruction");
-  info.textContent = "Capturando imagem da fonte selecionada...";
+  if (info) info.textContent = "Capturando frame...";
 
   try {
     const res = await fetch(`/api/frame_snapshot?source_type=${state.sourceType}&source_id=${encodeURIComponent(srcId)}`);
@@ -248,11 +372,11 @@ async function loadCalibrationSnapshot() {
       canvas.width = data.width;
       canvas.height = data.height;
       drawCalibrationCanvas();
-      info.textContent = "Clique nos 4 cantos da meia quadra ou arraste qualquer ponto com o mouse.";
+      if (info) info.textContent = "Clique ou arraste os 4 cantos da meia quadra oposta.";
     };
     img.src = data.image_base64;
   } catch (e) {
-    info.textContent = "Erro ao carregar frame.";
+    if (info) info.textContent = "Erro ao carregar frame.";
   }
 }
 
@@ -267,6 +391,7 @@ function onToggleValidateMode() {
 
 function setupCalibrationCanvasEvents() {
   const canvas = document.getElementById("calib-canvas");
+  if (!canvas) return;
 
   function getMouseImgCoords(evt) {
     const rect = canvas.getBoundingClientRect();
@@ -290,10 +415,10 @@ function setupCalibrationCanvasEvents() {
       if (res.ok) {
         const d = await res.json();
         document.getElementById("val-px").textContent = `(${d.u}, ${d.v})`;
-        document.getElementById("val-meters").textContent = `x = ${d.x_m} m, y = ${d.y_m} m`;
+        document.getElementById("val-meters").textContent = `${d.x_m}m, ${d.y_m}m`;
         document.getElementById("val-inside").textContent = d.inside_court
-          ? `✅ Dentro da Meia Quadra (Zona ${d.zone_id + 1})`
-          : `❌ Fora da Meia Quadra`;
+          ? `Dentro (Z${d.zone_id + 1})`
+          : `Fora`;
       }
       return;
     }
@@ -329,6 +454,7 @@ function setupCalibrationCanvasEvents() {
 
 function drawCalibrationCanvas() {
   const canvas = document.getElementById("calib-canvas");
+  if (!canvas) return;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -346,27 +472,27 @@ function drawCalibrationCanvas() {
     }
     if (pts.length === 4) {
       ctx.closePath();
-      ctx.fillStyle = "rgba(0, 230, 118, 0.18)";
+      ctx.fillStyle = "rgba(16, 185, 129, 0.18)";
       ctx.fill();
     }
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#00e676";
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#10b981";
     ctx.stroke();
     ctx.restore();
   }
 
-  const colors = ["#00e676", "#f5b919", "#00b8ff", "#ff6b81"];
+  const colors = ["#10b981", "#f59e0b", "#38bdf8", "#f43f5e"];
   pts.forEach((p, idx) => {
     ctx.beginPath();
-    ctx.arc(p[0], p[1], 12, 0, Math.PI * 2);
+    ctx.arc(p[0], p[1], 11, 0, Math.PI * 2);
     ctx.fillStyle = colors[idx];
     ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#09090b";
     ctx.stroke();
 
-    ctx.fillStyle = "#000";
-    ctx.font = "bold 14px Segoe UI";
+    ctx.fillStyle = "#09090b";
+    ctx.font = "bold 13px Inter, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(String(idx + 1), p[0], p[1]);
@@ -392,15 +518,14 @@ async function saveCalibration() {
     state.homography = data.homography;
     state.zones = data.zones;
     document.getElementById("val-reproj").textContent = `${state.homography.reproj_error_px} px`;
-    updateSetupCalibBanner();
-    alert(`Calibração salva com sucesso! Erro de reprojeção: ${state.homography.reproj_error_px} px`);
+    updateHubCalibrationBadge();
   }
 }
 
-// ==================== MAPA 2D VERTICAL DA MEIA QUADRA COM MAPA DE CALOR / DENSIDADE ====================
+// ==================== QUADRA 2D MINIMALISTA E MAPA DE CALOR ====================
 function getCourtRect(canvas) {
-  const padX = 28;
-  const padY = 26;
+  const padX = 24;
+  const padY = 22;
   return {
     x: padX,
     y: padY,
@@ -436,12 +561,12 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
   const L = state.homography.length_m || 11.885;
   const S = state.homography.service_line_y || 5.485;
 
-  // Fundo externo azul claro da quadra
-  ctx.fillStyle = "#3a7bb0";
+  // Fundo externo Stealth Dark
+  ctx.fillStyle = "#0d1017";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Piso interno da meia quadra
-  ctx.fillStyle = "#193b5c";
+  // Superfície interna da meia quadra
+  ctx.fillStyle = "#131c29";
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 
   const statsMap = {};
@@ -460,78 +585,75 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
     const isHover = z.id === hoveredZone;
     const zs = statsMap[z.id];
 
-    // Coloração de fundo + Mapa de Calor de Acertos (verde) e Erros (vermelho)
     if (zs && zs.total > 0) {
       if (zs.hits > 0) {
-        const alpha = Math.min(0.55, 0.22 + zs.hits * 0.08);
-        ctx.fillStyle = `rgba(0, 230, 118, ${alpha})`;
+        const alpha = Math.min(0.5, 0.2 + zs.hits * 0.08);
+        ctx.fillStyle = `rgba(16, 185, 129, ${alpha})`;
       } else {
-        const alpha = Math.min(0.52, 0.18 + zs.misses * 0.08);
-        ctx.fillStyle = `rgba(255, 71, 71, ${alpha})`;
+        const alpha = Math.min(0.45, 0.16 + zs.misses * 0.08);
+        ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
       }
       ctx.fillRect(x1, yTop, zw, zh);
     } else if (isTarget) {
-      ctx.fillStyle = "rgba(0, 230, 118, 0.30)";
+      ctx.fillStyle = "rgba(16, 185, 129, 0.24)";
       ctx.fillRect(x1, yTop, zw, zh);
     } else if (isHover) {
-      ctx.fillStyle = "rgba(0, 230, 118, 0.18)";
-      ctx.fillRect(x1, yTop, zw, zh);
-    } else {
-      ctx.fillStyle = "rgba(8, 18, 28, 0.42)";
+      ctx.fillStyle = "rgba(16, 185, 129, 0.12)";
       ctx.fillRect(x1, yTop, zw, zh);
     }
 
-    // Divisórias tracejadas das zonas
+    // Divisórias das zonas
     ctx.save();
-    ctx.strokeStyle = isTarget ? "#00e676" : "rgba(255,255,255,0.35)";
-    ctx.lineWidth = isTarget ? 2.5 : 1.2;
-    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = isTarget ? "#10b981" : "rgba(255, 255, 255, 0.14)";
+    ctx.lineWidth = isTarget ? 2 : 1;
+    ctx.setLineDash([4, 4]);
     ctx.strokeRect(x1, yTop, zw, zh);
     ctx.restore();
 
-    // Rótulo da zona + contador de densidade de Acertos e Erros
+    // Rótulo minimalista
     const midZx = x1 + zw / 2;
     const midZy = yTop + zh / 2;
-    ctx.fillStyle = isTarget ? "#ffffff" : "rgba(255,255,255,0.75)";
-    ctx.font = isTarget ? "bold 11px Segoe UI" : "10px Segoe UI";
+    ctx.fillStyle = isTarget ? "#fafafa" : "rgba(255, 255, 255, 0.55)";
+    ctx.font = isTarget ? "600 11px Inter, sans-serif" : "500 10px Inter, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`Z${z.id + 1}: ${z.name}`, midZx, midZy - (zs ? 7 : 0));
+    ctx.fillText(z.name, midZx, midZy - (zs ? 6 : 0));
 
     if (zs && (zs.hits > 0 || zs.misses > 0)) {
-      ctx.font = "bold 10px Segoe UI";
-      ctx.fillStyle = zs.hits > 0 ? "#a8ffcf" : "#ffb8b8";
-      ctx.fillText(`✓${zs.hits} | ✗${zs.misses}`, midZx, midZy + 9);
+      ctx.font = "600 10px Inter, sans-serif";
+      ctx.fillStyle = zs.hits > 0 ? "#34d399" : "#f87171";
+      ctx.fillText(`✓${zs.hits}  ✗${zs.misses}`, midZx, midZy + 9);
     }
   });
 
-  // Linhas oficiais brancas da meia quadra
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2.2;
+  // Linhas oficiais da quadra
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.78)";
+  ctx.lineWidth = 1.8;
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
   // Rede no topo
   ctx.beginPath();
-  ctx.lineWidth = 4.5;
-  ctx.moveTo(rect.x - 8, rect.y);
-  ctx.lineTo(rect.x + rect.w + 8, rect.y);
+  ctx.strokeStyle = "#10b981";
+  ctx.lineWidth = 3.5;
+  ctx.moveTo(rect.x - 6, rect.y);
+  ctx.lineTo(rect.x + rect.w + 6, rect.y);
   ctx.stroke();
 
-  // Linha de saque
+  // Linha de saque e linha central
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.lineWidth = 1.4;
   const [, sy] = metersToCourtCanvas(0, S, canvas);
   ctx.beginPath();
-  ctx.lineWidth = 1.8;
   ctx.moveTo(rect.x, sy);
   ctx.lineTo(rect.x + rect.w, sy);
   ctx.stroke();
 
-  // Linha central de saque
   const [midX] = metersToCourtCanvas(W / 2, S, canvas);
   ctx.beginPath();
   ctx.moveTo(midX, rect.y);
   ctx.lineTo(midX, sy);
   ctx.stroke();
 
-  // Desenha os quiques numerados (Verde = Acerto, Vermelho = Erro)
+  // Quiques numerados
   if (bounceEvents && bounceEvents.length > 0) {
     bounceEvents.forEach((ev, idx) => {
       const [bx, by] = metersToCourtCanvas(ev.x_m, ev.y_m, canvas);
@@ -539,21 +661,21 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
 
       if (isLast) {
         ctx.beginPath();
-        ctx.arc(bx, by, 14, 0, Math.PI * 2);
-        ctx.fillStyle = ev.is_hit ? "rgba(0, 230, 118, 0.35)" : "rgba(255, 71, 71, 0.35)";
+        ctx.arc(bx, by, 13, 0, Math.PI * 2);
+        ctx.fillStyle = ev.is_hit ? "rgba(16, 185, 129, 0.32)" : "rgba(239, 68, 68, 0.32)";
         ctx.fill();
       }
 
       ctx.beginPath();
-      ctx.arc(bx, by, 8.5, 0, Math.PI * 2);
-      ctx.fillStyle = ev.is_hit ? "#00e676" : "#ff3b30";
+      ctx.arc(bx, by, 8, 0, Math.PI * 2);
+      ctx.fillStyle = ev.is_hit ? "#10b981" : "#ef4444";
       ctx.fill();
-      ctx.lineWidth = 1.8;
-      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#09090b";
       ctx.stroke();
 
-      ctx.fillStyle = "#000000";
-      ctx.font = "bold 9px Segoe UI";
+      ctx.fillStyle = "#09090b";
+      ctx.font = "bold 9px Inter, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(String(ev.shot_number), bx, by);
@@ -561,9 +683,10 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
   }
 }
 
-// ==================== TELA 3: INTERAÇÃO DE ESCOLHA DA ZONA-FOCO ====================
+// ==================== INTERAÇÃO NA QUADRA 2D (ESCOLHA DE ZONA) ====================
 function setupZoneCanvasEvents() {
   const canvas = document.getElementById("zone-canvas");
+  if (!canvas) return;
 
   function findZoneAtMouse(evt) {
     const rect = canvas.getBoundingClientRect();
@@ -603,27 +726,22 @@ function setupZoneCanvasEvents() {
 }
 
 function updateZoneSelectionLabels() {
-  const levelNames = {
-    basico: "Básico (2 Zonas)",
-    medio: "Médio (3 Colunas)",
-    avancado: "Avançado (Matriz 3x2)"
-  };
-  document.getElementById("zone-lbl-player").textContent = state.player;
-  document.getElementById("zone-lbl-level").textContent = levelNames[state.level] || state.level;
   const zones = state.zones[state.level] || [];
   const zObj = zones.find(z => z.id === state.targetZone);
-  document.getElementById("zone-lbl-target").textContent = zObj
-    ? `Zona ${zObj.id + 1} — ${zObj.name}`
-    : `Zona ${state.targetZone + 1}`;
+  const targetEl = document.getElementById("zone-lbl-target");
+  if (targetEl) {
+    targetEl.textContent = zObj
+      ? `${zObj.name}`
+      : `Zona ${state.targetZone + 1}`;
+  }
 }
 
 function drawZoneSelectionCourt() {
   drawCourt2D("zone-canvas", state.level, state.targetZone, state.hoveredZone, [], []);
 }
 
-// ==================== TELA 4: ANÁLISE DE VÍDEO COMPLETO + VISUALIZAÇÃO DE QUIQUES ====================
+// ==================== SESSÃO DE VÍDEO / TREINO ====================
 async function startTrainingSession() {
-  state.player = document.getElementById("input-player-name").value.trim() || "Jogador";
   state.sourceId = getSelectedSourceId();
   state.lastEventCount = 0;
   state.sessionEvents = [];
@@ -632,25 +750,15 @@ async function startTrainingSession() {
 
   switchView("training");
 
-  const zones = state.zones[state.level] || [];
-  const zObj = zones.find(z => z.id === state.targetZone);
-  document.getElementById("trn-player").textContent = state.player;
-  document.getElementById("trn-level").textContent = state.level.toUpperCase();
-  document.getElementById("trn-target").textContent = zObj ? `Z${zObj.id + 1}: ${zObj.name}` : `Zona ${state.targetZone + 1}`;
-  document.getElementById("live-shot-log").innerHTML = `<p class="muted">Processando...</p>`;
   document.getElementById("bounce-jump-chips").innerHTML = "";
   document.getElementById("corner-most-hits").textContent = "--";
   document.getElementById("corner-most-misses").textContent = "--";
   document.getElementById("btn-reopen-popup").style.display = "none";
-  document.getElementById("btn-pause-video").textContent = "⏸️ Pausar";
+  document.getElementById("btn-pause-video").textContent = "Pausar";
 
   const isVideo = state.sourceType === "video";
-  document.getElementById("video-stage-title").textContent = isVideo
-    ? `Vídeo Analisado: ${state.sourceId}`
-    : `Câmera Ao Vivo (${state.sourceId})`;
   document.getElementById("video-playback-controls").style.display = isVideo ? "flex" : "none";
 
-  // Se for vídeo, mostra overlay enquanto analisa o vídeo como um todo
   const overlay = document.getElementById("video-analyzing-overlay");
   overlay.style.display = isVideo ? "flex" : "none";
   document.getElementById("analyzing-bar-fill").style.width = "0%";
@@ -670,7 +778,6 @@ async function startTrainingSession() {
     })
   });
 
-  // Conecta stream MJPEG
   document.getElementById("live-video-feed").src = `/api/training/video_feed?t=${Date.now()}`;
 
   if (state.pollTimer) clearInterval(state.pollTimer);
@@ -684,11 +791,10 @@ async function pollTrainingStatus() {
     state.lastStatus = st;
     state.totalFrames = st.total_frames || 0;
 
-    document.getElementById("trn-status-text").textContent = st.status_msg;
     document.getElementById("live-score").textContent = st.score;
     document.getElementById("live-hits").textContent = st.hits;
     document.getElementById("live-misses").textContent = st.misses;
-    document.getElementById("live-accuracy").textContent = `${st.accuracy.toFixed(1)}%`;
+    document.getElementById("live-accuracy").textContent = `${st.accuracy.toFixed(0)}%`;
 
     if (st.most_hits_summary) {
       document.getElementById("corner-most-hits").textContent = st.most_hits_summary;
@@ -702,7 +808,7 @@ async function pollTrainingStatus() {
       overlay.style.display = "flex";
       const pct = st.total_frames > 0 ? Math.min(100, Math.round((st.current_frame / st.total_frames) * 100)) : 0;
       document.getElementById("analyzing-bar-fill").style.width = `${pct}%`;
-      document.getElementById("analyzing-frame-txt").textContent = `${st.status_msg}`;
+      document.getElementById("analyzing-frame-txt").textContent = st.status_msg;
       return;
     } else {
       overlay.style.display = "none";
@@ -711,19 +817,17 @@ async function pollTrainingStatus() {
     if (st.total_frames > 0) {
       const pct = Math.min(100, Math.round((st.current_frame / st.total_frames) * 100));
       document.getElementById("trn-progress-bar").style.width = `${pct}%`;
-      document.getElementById("trn-frame-counter").textContent = `Frame ${st.current_frame} / ${st.total_frames}`;
+      document.getElementById("trn-frame-counter").textContent = `${st.current_frame} / ${st.total_frames}`;
     } else {
-      document.getElementById("trn-frame-counter").textContent = `Frame ao vivo #${st.current_frame}`;
+      document.getElementById("trn-frame-counter").textContent = `#${st.current_frame}`;
     }
 
-    // Quando o vídeo termina de ser analisado como um todo -> Dispara Popup "Vídeo Analisado"!
     if (st.source_type === "video" && st.analysis_done && !state.popupShownForSession) {
       state.popupShownForSession = true;
       state.sessionEvents = st.events || [];
       state.zoneStats = st.zone_stats || [];
 
       playFeedbackBeep(true);
-      renderLiveShotLog(state.sessionEvents);
       renderBounceJumpChips(state.sessionEvents);
       drawCourt2D("training-court-canvas", state.level, state.targetZone, -1, state.sessionEvents, state.zoneStats);
       populateSummaryScreen(st);
@@ -732,14 +836,12 @@ async function pollTrainingStatus() {
       populateAndOpenAnalyzedPopup(st);
     }
 
-    // No modo câmera ao vivo, atualiza conforme cada quique novo acontece
     if (st.source_type === "camera" && st.events.length > state.lastEventCount) {
       const newest = st.events[st.events.length - 1];
       playFeedbackBeep(newest.is_hit);
       state.lastEventCount = st.events.length;
       state.sessionEvents = st.events;
       state.zoneStats = st.zone_stats || [];
-      renderLiveShotLog(st.events);
       drawCourt2D("training-court-canvas", state.level, state.targetZone, -1, st.events, state.zoneStats);
     }
   } catch (e) {}
@@ -748,33 +850,31 @@ async function pollTrainingStatus() {
 // ==================== POPUP "VÍDEO ANALISADO" ====================
 function populateAndOpenAnalyzedPopup(st) {
   document.getElementById("modal-subtitle").textContent =
-    `Vídeo: ${state.sourceId} • Jogador: ${st.player} • Total de ${st.total_shots} quique(s) avaliado(s)`;
-  document.getElementById("pop-score").textContent = `${st.score} pts`;
+    `${state.sourceId} • ${st.total_shots} quique(s) detectado(s)`;
+  document.getElementById("pop-score").textContent = st.score;
   document.getElementById("pop-hits").textContent = st.hits;
   document.getElementById("pop-misses").textContent = st.misses;
-  document.getElementById("pop-accuracy").textContent = `${st.accuracy.toFixed(1)}%`;
-  document.getElementById("pop-most-hits").textContent = st.most_hits_summary || "Nenhum acerto";
-  document.getElementById("pop-most-misses").textContent = st.most_misses_summary || "Nenhum erro";
+  document.getElementById("pop-accuracy").textContent = `${st.accuracy.toFixed(0)}%`;
+  document.getElementById("pop-most-hits").textContent = st.most_hits_summary || "Nenhum";
+  document.getElementById("pop-most-misses").textContent = st.most_misses_summary || "Nenhum";
 
   const listEl = document.getElementById("pop-events-list");
   const evs = st.events || [];
   if (evs.length === 0) {
-    listEl.innerHTML = `<p class="muted">Nenhum quique de bola em movimento foi detectado neste vídeo.</p>`;
+    listEl.innerHTML = `<p class="subtle">Nenhum quique detectado neste vídeo.</p>`;
   } else {
     listEl.innerHTML = evs
       .map(e => `
         <div class="shot-item ${e.is_hit ? 'hit' : 'miss'}" onclick="jumpToBounceFromPopup(${e.frame})">
           <div>
-            <strong>Quique #${e.shot_number}</strong> &bull; Tempo: <strong>${e.time_sec}s</strong> (Frame ${e.frame})
-            <br/>
-            <span class="muted">Quadra: (${e.x_m}m, ${e.y_m}m) &rarr; ${e.zone_name || ('Zona ' + (e.zone_id + 1))}</span>
+            <strong>#${e.shot_number}</strong> &bull; ${e.time_sec}s
+            <span class="subtle" style="margin-left:6px;">${e.zone_name || ('Zona ' + (e.zone_id + 1))}</span>
           </div>
-          <div style="text-align:right;">
-            <strong style="color:${e.is_hit ? 'var(--accent-green)' : 'var(--accent-red)'};">
-              ${e.is_hit ? '✅ ACERTO (+10)' : '❌ ERRO (-5)'}
+          <div>
+            <strong class="${e.is_hit ? 'text-emerald' : 'text-danger'}">
+              ${e.is_hit ? '+10 pts' : '-5 pts'}
             </strong>
-            <br/>
-            <small style="color:#93acc5;text-decoration:underline;">▶️ Ver no vídeo</small>
+            <span class="subtle" style="margin-left:8px;font-size:0.74rem;">Ver &rarr;</span>
           </div>
         </div>
       `)
@@ -801,35 +901,19 @@ function jumpToBounceFromPopup(frameIdx) {
   seekVideoToFrame(Math.max(0, frameIdx - 25));
 }
 
-// ==================== CONTROLES DE REPRODUÇÃO E ATALHOS DE QUIQUES ====================
+// ==================== CONTROLES DE REPRODUÇÃO E CHIPS DE QUIQUES ====================
 function renderBounceJumpChips(events) {
   const wrap = document.getElementById("bounce-jump-chips");
+  if (!wrap) return;
   if (!events || events.length === 0) {
-    wrap.innerHTML = `<span class="muted">Nenhum quique detectado neste vídeo.</span>`;
+    wrap.innerHTML = `<span class="subtle" style="font-size:0.75rem;">Nenhum quique detectado.</span>`;
     return;
   }
-  wrap.innerHTML = `<span class="muted" style="align-self:center;margin-right:4px;">Ir para Quique:</span>` +
-    events.map(e => `
-      <button class="bounce-chip ${e.is_hit ? 'hit' : 'miss'}" onclick="seekVideoToFrame(${Math.max(0, e.frame - 25)})" title="Clique para ver o Quique #${e.shot_number} no vídeo">
-        🎯 #${e.shot_number} (${e.time_sec}s) ${e.is_hit ? '✓' : '✗'}
-      </button>
-    `).join("");
-}
-
-function renderLiveShotLog(events) {
-  const container = document.getElementById("live-shot-log");
-  if (!events || events.length === 0) {
-    container.innerHTML = `<p class="muted">Nenhum quique contabilizado.</p>`;
-    return;
-  }
-  container.innerHTML = events
-    .map(e => `
-      <div class="shot-item ${e.is_hit ? 'hit' : 'miss'}" onclick="seekVideoToFrame(${Math.max(0, e.frame - 25)})" title="Clique para ver este quique no vídeo">
-        <span><strong>#${e.shot_number}</strong> (${e.time_sec}s) &bull; Z${e.zone_id + 1}</span>
-        <strong>${e.is_hit ? '+10' : '-5'}</strong>
-      </div>
-    `)
-    .join("");
+  wrap.innerHTML = events.map(e => `
+    <button class="bounce-chip ${e.is_hit ? 'hit' : 'miss'}" onclick="seekVideoToFrame(${Math.max(0, e.frame - 25)})">
+      #${e.shot_number} (${e.time_sec}s) ${e.is_hit ? '✓' : '✗'}
+    </button>
+  `).join("");
 }
 
 async function toggleVideoPause() {
@@ -840,7 +924,7 @@ async function toggleVideoPause() {
   });
   if (res.ok) {
     const data = await res.json();
-    document.getElementById("btn-pause-video").textContent = data.paused ? "▶️ Reproduzir" : "⏸️ Pausar";
+    document.getElementById("btn-pause-video").textContent = data.paused ? "Continuar" : "Pausar";
   }
 }
 
@@ -850,7 +934,7 @@ async function restartVideoReplay() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "restart" })
   });
-  document.getElementById("btn-pause-video").textContent = "⏸️ Pausar";
+  document.getElementById("btn-pause-video").textContent = "Pausar";
 }
 
 async function seekVideoToFrame(frameIdx) {
@@ -886,24 +970,12 @@ async function finishAndGoToSummary() {
   switchView("summary");
 }
 
-async function changeDifficultyDuringTraining() {
-  await stopTrainingSession();
-  if (state.pollTimer) clearInterval(state.pollTimer);
-  switchView("zone");
-}
-
-async function changeProfileDuringTraining() {
-  await stopTrainingSession();
-  if (state.pollTimer) clearInterval(state.pollTimer);
-  switchView("setup");
-}
-
-// ==================== TELA 5: RESUMO DA SESSÃO & RANKING ====================
+// ==================== RANKING & RESUMO ====================
 function populateSummaryScreen(st) {
   document.getElementById("sum-score").textContent = st.score;
   document.getElementById("sum-hits").textContent = st.hits;
   document.getElementById("sum-misses").textContent = st.misses;
-  document.getElementById("sum-accuracy").textContent = `${st.accuracy.toFixed(1)}%`;
+  document.getElementById("sum-accuracy").textContent = `${st.accuracy.toFixed(0)}%`;
   state.activeRankTab = state.level;
   switchRankingTab(state.level);
 }
@@ -918,9 +990,10 @@ function switchRankingTab(lvl) {
 
 function renderRankingTable() {
   const tbody = document.getElementById("ranking-tbody");
+  if (!tbody) return;
   const rows = (state.ranking && state.ranking[state.activeRankTab]) || [];
   if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="muted">Nenhum treino registrado neste nível ainda.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="subtle">Nenhum treino registrado neste nível.</td></tr>`;
     return;
   }
   tbody.innerHTML = rows
@@ -928,11 +1001,11 @@ function renderRankingTable() {
       <tr>
         <td><strong>${i + 1}º</strong></td>
         <td><strong>${r.player}</strong></td>
-        <td><strong class="highlight-green">${r.score} pts</strong></td>
+        <td><strong class="text-emerald">${r.score} pts</strong></td>
         <td>${r.hits}</td>
         <td>${r.misses}</td>
-        <td>${r.accuracy.toFixed(1)}%</td>
-        <td>${r.date}</td>
+        <td>${r.accuracy.toFixed(0)}%</td>
+        <td class="subtle">${r.date}</td>
       </tr>
     `)
     .join("");

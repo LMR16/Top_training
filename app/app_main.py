@@ -7,7 +7,7 @@ import threading
 import webbrowser
 import cv2
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
@@ -24,6 +24,17 @@ from app.core.game_engine import GameEngine
 from app.core.storage import StorageManager
 
 app = FastAPI(title="Top Training — Tennis Analytics")
+
+
+@app.middleware("http")
+async def disable_static_cache(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(STATIC_DIR, exist_ok=True)
@@ -152,6 +163,24 @@ class VideoControlRequest(BaseModel):
     frame: int = 0
 
 
+class ProfileRequest(BaseModel):
+    name: str
+
+
+def _build_profiles_meta() -> dict:
+    profiles = storage.load_profiles()
+    meta = {}
+    for pname, pdata in profiles.items():
+        sessions = pdata.get("sessions", [])
+        best_score = max((s.get("score", 0) for s in sessions), default=0)
+        meta[pname] = {
+            "name": pname,
+            "sessions_count": len(sessions),
+            "best_score": best_score
+        }
+    return meta
+
+
 @app.get("/")
 def index():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
@@ -162,11 +191,12 @@ def api_init():
     profiles = storage.load_profiles()
     return {
         "profiles": list(profiles.keys()),
+        "profiles_meta": _build_profiles_meta(),
         "videos": list_input_videos(),
         "cameras": [
-            {"id": "0", "label": "Câmera 0 (Padrão / Iriun USB-WiFi)"},
-            {"id": "1", "label": "Câmera 1 (Secundária / Iriun)"},
-            {"id": "2", "label": "Câmera 2 (Externa UVC)"}
+            {"id": "0", "label": "Câmera 0 (USB / Padrão)"},
+            {"id": "1", "label": "Câmera 1 (Secundária)"},
+            {"id": "2", "label": "Câmera 2 (Externa)"}
         ],
         "homography": homography.to_dict(),
         "zones": {
@@ -175,6 +205,17 @@ def api_init():
             "avancado": game_engine.get_zones("avancado")
         },
         "ranking": storage.get_ranking()
+    }
+
+
+@app.post("/api/profile")
+def api_create_or_select_profile(req: ProfileRequest):
+    clean = req.name.strip() or "Jogador"
+    storage.get_or_create_profile(clean)
+    return {
+        "player": clean,
+        "profiles": list(storage.load_profiles().keys()),
+        "profiles_meta": _build_profiles_meta()
     }
 
 
@@ -842,7 +883,7 @@ def api_shutdown():
 
 def main():
     port = 8000
-    url = f"http://127.0.0.1:{port}"
+    url = f"http://127.0.0.1:{port}/?v={int(time.time())}"
     print(f"Iniciando Top Training em {url} ...")
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
