@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=stealth2" />
+  <link rel="stylesheet" href="/static/style.css?v=stealth3" />
 </head>
 <body class="bg-vivid">
   <!-- Camada de Imagem de Fundo (coloque sua imagem em app/static/bg_tennis.jpg ou bg_tennis.png) -->
@@ -306,7 +306,28 @@
         </div>
 
         <aside class="surface-card calib-controls-card">
-          <label class="minimal-label">Ordem dos 4 cantos</label>
+          <div>
+            <label class="minimal-label">Fonte para Calibrar</label>
+            <div class="segmented-control">
+              <button type="button" id="calib-seg-video" class="seg-btn active" onclick="setCalibSourceType('video')">
+                Vídeo
+              </button>
+              <button type="button" id="calib-seg-camera" class="seg-btn" onclick="setCalibSourceType('camera')">
+                Câmera Ao Vivo
+              </button>
+            </div>
+
+            <div id="calib-video-select-box" style="margin-top: 8px;">
+              <select id="calib-select-video" class="input" onchange="onCalibSourceIdChange()"></select>
+            </div>
+            <div id="calib-camera-select-box" style="margin-top: 8px; display: none;">
+              <select id="calib-select-camera" class="input" onchange="onCalibSourceIdChange()"></select>
+            </div>
+          </div>
+
+          <div class="calib-divider"></div>
+
+          <label class="minimal-label" style="margin-bottom: 4px;">Ordem dos 4 cantos</label>
           <ol class="minimal-corner-list">
             <li><span class="corner-num c1">1</span> Fundo Esquerdo</li>
             <li><span class="corner-num c2">2</span> Fundo Direito</li>
@@ -314,7 +335,7 @@
             <li><span class="corner-num c4">4</span> Rede Esquerda</li>
           </ol>
 
-          <button class="btn-emerald full-width" onclick="saveCalibration()">
+          <button id="btn-save-calib" class="btn-emerald full-width" onclick="saveCalibration()">
             Salvar Calibração
           </button>
 
@@ -456,6 +477,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=stealth2"></script>
+  <script src="/static/app.js?v=stealth3"></script>
 </body>
 </html>

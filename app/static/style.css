@@ -883,10 +883,10 @@ body.bg-dimmed .app-bg-overlay {
 /* ==================== TELA 5: CALIBRAÇÃO ==================== */
 .calib-minimal-grid {
   width: 100%;
-  max-width: 1380px;
+  max-width: 1420px;
   height: calc(100vh - 96px);
   display: grid;
-  grid-template-columns: 1fr 290px;
+  grid-template-columns: 1fr 315px;
   gap: 16px;
 }
 
@@ -925,23 +925,24 @@ body.bg-dimmed .app-bg-overlay {
 }
 
 .calib-controls-card {
-  gap: 14px;
+  gap: 10px;
+  overflow-y: auto;
 }
 
 .minimal-corner-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 0.84rem;
+  gap: 6px;
+  font-size: 0.81rem;
 }
 
 .minimal-corner-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   background: var(--bg-elevated);
-  padding: 8px 11px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
 }
 

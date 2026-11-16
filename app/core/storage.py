@@ -11,8 +11,20 @@ class StorageManager:
         self.profiles_file = os.path.join(self.data_dir, "profiles.json")
 
     def save_homography(self, data: dict):
+        existing = self.load_homography()
+        by_source = existing.get("by_source", {})
+        src_key = data.get("source_key", "")
+        if src_key and "pixel_points" in data and len(data["pixel_points"]) == 4:
+            by_source[src_key] = {
+                "pixel_points": data["pixel_points"],
+                "width_m": data.get("width_m", 8.23),
+                "length_m": data.get("length_m", 11.885),
+                "reproj_error_px": data.get("reproj_error_px", 0.0)
+            }
+        payload = dict(data)
+        payload["by_source"] = by_source
         with open(self.homography_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json.dump(payload, f, indent=2, ensure_ascii=False)
 
     def load_homography(self) -> dict:
         if not os.path.exists(self.homography_file):

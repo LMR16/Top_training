@@ -142,6 +142,8 @@ class CalibrateRequest(BaseModel):
     pixel_points: list
     width_m: float = 8.23
     length_m: float = 11.885
+    source_type: str = "video"
+    source_id: str = ""
 
 
 class ValidatePointRequest(BaseModel):
@@ -223,12 +225,14 @@ def api_create_or_select_profile(req: ProfileRequest):
 def api_frame_snapshot(source_type: str = "video", source_id: str = ""):
     if source_type == "camera":
         cam_idx = int(source_id) if str(source_id).isdigit() else 0
+        actual_id = str(cam_idx)
         cap = _open_camera_low_latency(cam_idx)
     else:
         videos = list_input_videos()
         vid_name = source_id if source_id in videos else (videos[0] if videos else "")
         if not vid_name:
             raise HTTPException(status_code=404, detail="Nenhum vídeo encontrado em src/input_videos.")
+        actual_id = vid_name
         vid_path = os.path.join(ROOT_DIR, "src", "input_videos", vid_name)
         cap = cv2.VideoCapture(vid_path)
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -241,6 +245,11 @@ def api_frame_snapshot(source_type: str = "video", source_id: str = ""):
         raise HTTPException(status_code=400, detail=f"Não foi possível capturar imagem da fonte ({source_type}:{source_id}).")
 
     h, w = frame.shape[:2]
+    src_key = f"{source_type}:{actual_id}"
+    saved_cal = storage.load_homography()
+    if saved_cal:
+        homography.load_from_dict(saved_cal, source_key=src_key)
+
     ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
     if not ok:
         raise HTTPException(status_code=500, detail="Erro ao codificar frame JPEG.")
@@ -249,6 +258,8 @@ def api_frame_snapshot(source_type: str = "video", source_id: str = ""):
     return {
         "width": w,
         "height": h,
+        "source_type": source_type,
+        "source_id": actual_id,
         "image_base64": f"data:image/jpeg;base64,{b64}",
         "homography": homography.to_dict()
     }
@@ -258,7 +269,13 @@ def api_frame_snapshot(source_type: str = "video", source_id: str = ""):
 def api_calibrate(req: CalibrateRequest):
     if len(req.pixel_points) != 4:
         raise HTTPException(status_code=400, detail="Forneça exatamente 4 pontos.")
-    cal = homography.calibrate(req.pixel_points, width_m=req.width_m, length_m=req.length_m)
+    src_key = f"{req.source_type}:{req.source_id}" if req.source_id else ""
+    cal = homography.calibrate(
+        req.pixel_points,
+        width_m=req.width_m,
+        length_m=req.length_m,
+        source_key=src_key
+    )
     storage.save_homography(cal)
     return {
         "homography": cal,
@@ -286,7 +303,10 @@ def api_validate_point(req: ValidatePointRequest):
     }
 
 
-def _ensure_default_calibration(w: int, h: int):
+def _ensure_default_calibration(w: int, h: int, source_key: str = ""):
+    saved_cal = storage.load_homography()
+    if saved_cal:
+        homography.load_from_dict(saved_cal, source_key=source_key)
     if not homography.is_calibrated():
         default_pts = [
             [round(w * 0.22, 1), round(h * 0.88, 1)],
@@ -294,7 +314,7 @@ def _ensure_default_calibration(w: int, h: int):
             [round(w * 0.68, 1), round(h * 0.25, 1)],
             [round(w * 0.32, 1), round(h * 0.25, 1)],
         ]
-        cal = homography.calibrate(default_pts)
+        cal = homography.calibrate(default_pts, source_key=source_key)
         storage.save_homography(cal)
 
 
@@ -319,7 +339,7 @@ def _run_video_session(req: StartTrainingRequest):
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1920
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 1080
 
-    _ensure_default_calibration(w, h)
+    _ensure_default_calibration(w, h, source_key=f"video:{req.source_id}")
 
     with training_state.lock:
         training_state.fps = fps
@@ -700,7 +720,7 @@ def _run_camera_session(req: StartTrainingRequest):
 
         h, w = frame.shape[:2]
         if idx == 0:
-            _ensure_default_calibration(w, h)
+            _ensure_default_calibration(w, h, source_key=f"camera:{cam_idx}")
 
         idx += 1
         with cam_lock:

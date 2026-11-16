@@ -118,30 +118,44 @@ async function fetchInitData() {
 
   renderProfileSelectionUI();
 
-  // Preenche dropdown de vídeos
+  // Preenche dropdown de vídeos (Preparação e Calibração)
   const vidSel = document.getElementById("select-video-file");
-  if (vidSel) {
-    vidSel.innerHTML = "";
+  const calibVidSel = document.getElementById("calib-select-video");
+  [vidSel, calibVidSel].forEach(sel => {
+    if (!sel) return;
+    sel.innerHTML = "";
     (data.videos || []).forEach(v => {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = v;
-      vidSel.appendChild(opt);
+      sel.appendChild(opt);
     });
-    if (data.videos && data.videos.length > 0) {
-      state.sourceId = data.videos[0];
-    }
+  });
+  if (data.videos && data.videos.length > 0) {
+    state.sourceId = data.videos[0];
+  }
+  if (vidSel) {
+    vidSel.addEventListener("change", () => {
+      if (calibVidSel) calibVidSel.value = vidSel.value;
+    });
   }
 
-  // Preenche dropdown de câmeras
+  // Preenche dropdown de câmeras (Preparação e Calibração)
   const camSel = document.getElementById("select-camera-index");
-  if (camSel) {
-    camSel.innerHTML = "";
+  const calibCamSel = document.getElementById("calib-select-camera");
+  [camSel, calibCamSel].forEach(sel => {
+    if (!sel) return;
+    sel.innerHTML = "";
     (data.cameras || []).forEach(c => {
       const opt = document.createElement("option");
       opt.value = c.id;
       opt.textContent = c.label;
-      camSel.appendChild(opt);
+      sel.appendChild(opt);
+    });
+  });
+  if (camSel) {
+    camSel.addEventListener("change", () => {
+      if (calibCamSel) calibCamSel.value = camSel.value;
     });
   }
 
@@ -317,14 +331,47 @@ function setSourceType(type) {
   const camBox = document.getElementById("camera-select-box");
   if (vidBox) vidBox.style.display = type === "video" ? "block" : "none";
   if (camBox) camBox.style.display = type === "camera" ? "block" : "none";
+
+  // Sincroniza controles da tela de calibração
+  const cBtnVid = document.getElementById("calib-seg-video");
+  const cBtnCam = document.getElementById("calib-seg-camera");
+  if (cBtnVid) cBtnVid.classList.toggle("active", type === "video");
+  if (cBtnCam) cBtnCam.classList.toggle("active", type === "camera");
+
+  const cVidBox = document.getElementById("calib-video-select-box");
+  const cCamBox = document.getElementById("calib-camera-select-box");
+  if (cVidBox) cVidBox.style.display = type === "video" ? "block" : "none";
+  if (cCamBox) cCamBox.style.display = type === "camera" ? "block" : "none";
+}
+
+function setCalibSourceType(type) {
+  setSourceType(type);
+  loadCalibrationSnapshot();
+}
+
+function onCalibSourceIdChange() {
+  if (state.sourceType === "camera") {
+    const cCam = document.getElementById("calib-select-camera");
+    const zCam = document.getElementById("select-camera-index");
+    if (cCam && zCam) zCam.value = cCam.value;
+  } else {
+    const cVid = document.getElementById("calib-select-video");
+    const zVid = document.getElementById("select-video-file");
+    if (cVid && zVid) zVid.value = cVid.value;
+  }
+  loadCalibrationSnapshot();
 }
 
 function getSelectedSourceId() {
   if (state.sourceType === "camera") {
-    const el = document.getElementById("select-camera-index");
+    const el = state.currentView === "calibrate"
+      ? document.getElementById("calib-select-camera") || document.getElementById("select-camera-index")
+      : document.getElementById("select-camera-index");
     return (el && el.value) ? el.value : "0";
   }
-  const el = document.getElementById("select-video-file");
+  const el = state.currentView === "calibrate"
+    ? document.getElementById("calib-select-video") || document.getElementById("select-video-file")
+    : document.getElementById("select-video-file");
   return (el && el.value) ? el.value : "";
 }
 
@@ -504,13 +551,16 @@ async function saveCalibration() {
     alert("Marque os 4 cantos da meia quadra antes de salvar.");
     return;
   }
+  const srcId = getSelectedSourceId();
   const res = await fetch("/api/calibrate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       pixel_points: state.calibPoints,
       width_m: 8.23,
-      length_m: 11.885
+      length_m: 11.885,
+      source_type: state.sourceType,
+      source_id: srcId
     })
   });
   if (res.ok) {
@@ -519,6 +569,13 @@ async function saveCalibration() {
     state.zones = data.zones;
     document.getElementById("val-reproj").textContent = `${state.homography.reproj_error_px} px`;
     updateHubCalibrationBadge();
+
+    const btn = document.getElementById("btn-save-calib");
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = "✓ Calibração Salva!";
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    }
   }
 }
 
