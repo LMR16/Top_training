@@ -4,6 +4,7 @@ const state = {
   level: "basico",
   targetZone: 0,
   hoveredZone: -1,
+  selectedBounceShot: -1,
   sourceType: "video",
   sourceId: "",
   soundEnabled: true,
@@ -220,6 +221,109 @@ function goToCalibration() {
 }
 
 // ==================== TELA 2: CALIBRAÇÃO DE 4 PONTOS E HOMOGRAFIA ====================
+// ==================== TELA 2: CALIBRAÇÃO DE 4 PONTOS E HOMOGRAFIA ====================
+function validateCalibrationGeometry(pts) {
+  if (!pts || pts.length < 4) {
+    return {
+      valid: false,
+      incomplete: true,
+      message: `Marque os 4 cantos (${pts ? pts.length : 0}/4)`
+    };
+  }
+
+  // 1. Checagem de convexidade (produtos vetoriais consecutivos devem ter o mesmo sinal)
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % 4];
+    const c = pts[(i + 2) % 4];
+    const cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (Math.abs(cross) < 1e-3) {
+      return { valid: false, message: "Pontos colineares detectados" };
+    }
+    const currSign = cross > 0 ? 1 : -1;
+    if (sign === 0) sign = currSign;
+    else if (sign !== currSign) {
+      return { valid: false, message: "Polígono côncavo ou linhas cruzadas" };
+    }
+  }
+
+  // 2. Checagem de ordem básica (Fundo 1-2 abaixo da Rede 3-4; Esquerda 1-4 à esquerda de 2-3)
+  const avgYBase = (pts[0][1] + pts[1][1]) / 2;
+  const avgYNet = (pts[2][1] + pts[3][1]) / 2;
+  if (avgYBase <= avgYNet) {
+    return { valid: false, message: "Ordem invertida: Fundo (1-2) deve ficar abaixo da Rede (3-4)" };
+  }
+
+  const avgXLeft = (pts[0][0] + pts[3][0]) / 2;
+  const avgXRight = (pts[1][0] + pts[2][0]) / 2;
+  if (avgXLeft >= avgXRight) {
+    return { valid: false, message: "Ordem invertida: Esquerda (1-4) deve ficar à esquerda de (2-3)" };
+  }
+
+  // 3. Checagem de ângulos internos (evita quadrilátero quase triangular / degenerado)
+  for (let i = 0; i < 4; i++) {
+    const prev = pts[(i + 3) % 4];
+    const curr = pts[i];
+    const next = pts[(i + 1) % 4];
+    const v1 = [prev[0] - curr[0], prev[1] - curr[1]];
+    const v2 = [next[0] - curr[0], next[1] - curr[1]];
+    const mag = Math.hypot(v1[0], v1[1]) * Math.hypot(v2[0], v2[1]);
+    if (mag === 0) return { valid: false, message: `Pontos sobrepostos no canto ${i + 1}` };
+    const cosTheta = Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / mag));
+    const angleDeg = (Math.acos(cosTheta) * 180) / Math.PI;
+    if (angleDeg > 160 || angleDeg < 15) {
+      return {
+        valid: false,
+        message: `Canto ${i + 1} muito raso (${Math.round(angleDeg)}°) — geometria distorcida`
+      };
+    }
+  }
+
+  // 4. Checagem de perspectiva (linha de fundo normalmente mais larga que a rede)
+  const wBase = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+  const wNet = Math.hypot(pts[2][0] - pts[3][0], pts[2][1] - pts[3][1]);
+  if (wNet > wBase * 1.15) {
+    return {
+      valid: false,
+      message: "Perspectiva incomum: rede maior que a linha de fundo"
+    };
+  }
+
+  return { valid: true, message: "✅ Válida (Convexa)" };
+}
+
+function updateCornerLabelsUI() {
+  const ids = ["lbl-c1", "lbl-c2", "lbl-c3", "lbl-c4"];
+  ids.forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const pt = state.calibPoints[idx];
+    if (pt) {
+      el.textContent = `(${Math.round(pt[0])}, ${Math.round(pt[1])} px)`;
+      el.classList.add("set");
+    } else {
+      el.textContent = "-- px";
+      el.classList.remove("set");
+    }
+  });
+
+  const geomEl = document.getElementById("val-geom");
+  if (geomEl) {
+    const geom = validateCalibrationGeometry(state.calibPoints);
+    if (geom.incomplete) {
+      geomEl.textContent = geom.message;
+      geomEl.style.color = "var(--text-muted)";
+    } else if (geom.valid) {
+      geomEl.textContent = geom.message;
+      geomEl.style.color = "var(--accent-green)";
+    } else {
+      geomEl.textContent = `⚠️ ${geom.message}`;
+      geomEl.style.color = "var(--accent-red)";
+    }
+  }
+}
+
 async function loadCalibrationSnapshot() {
   const srcId = getSelectedSourceId();
   const info = document.getElementById("calib-instruction");
@@ -238,7 +342,7 @@ async function loadCalibrationSnapshot() {
 
     if (data.homography && data.homography.pixel_points && data.homography.pixel_points.length === 4) {
       state.calibPoints = data.homography.pixel_points.map(p => [p[0], p[1]]);
-      document.getElementById("val-reproj").textContent = `${data.homography.reproj_error_px} px`;
+      document.getElementById("val-reproj").textContent = "Exato (4/4 vértices)";
     }
 
     const img = new Image();
@@ -258,11 +362,19 @@ async function loadCalibrationSnapshot() {
 
 function resetCalibrationPoints() {
   state.calibPoints = [];
+  document.getElementById("val-reproj").textContent = "--";
+  document.getElementById("val-px").textContent = "--";
+  document.getElementById("val-meters").textContent = "--";
+  document.getElementById("val-inside").textContent = "--";
   drawCalibrationCanvas();
 }
 
 function onToggleValidateMode() {
   state.validateMode = document.getElementById("chk-validate-mode").checked;
+  const canvas = document.getElementById("calib-canvas");
+  if (canvas) {
+    canvas.style.cursor = state.validateMode ? "help" : "crosshair";
+  }
 }
 
 function setupCalibrationCanvasEvents() {
@@ -302,6 +414,7 @@ function setupCalibrationCanvasEvents() {
       const [px, py] = state.calibPoints[i];
       if (Math.hypot(mx - px, my - py) <= 26) {
         state.draggingIdx = i;
+        canvas.style.cursor = "grabbing";
         return;
       }
     }
@@ -313,17 +426,28 @@ function setupCalibrationCanvasEvents() {
   });
 
   canvas.addEventListener("mousemove", (evt) => {
-    if (state.draggingIdx < 0) return;
     const [mx, my] = getMouseImgCoords(evt);
-    state.calibPoints[state.draggingIdx] = [
-      Math.max(0, Math.min(canvas.width, Math.round(mx))),
-      Math.max(0, Math.min(canvas.height, Math.round(my)))
-    ];
-    drawCalibrationCanvas();
+
+    if (state.draggingIdx >= 0) {
+      state.calibPoints[state.draggingIdx] = [
+        Math.max(0, Math.min(canvas.width, Math.round(mx))),
+        Math.max(0, Math.min(canvas.height, Math.round(my)))
+      ];
+      drawCalibrationCanvas();
+      return;
+    }
+
+    if (!state.validateMode) {
+      const hoveringPoint = state.calibPoints.some(([px, py]) => Math.hypot(mx - px, my - py) <= 26);
+      canvas.style.cursor = hoveringPoint ? "grab" : "crosshair";
+    }
   });
 
   window.addEventListener("mouseup", () => {
-    state.draggingIdx = -1;
+    if (state.draggingIdx >= 0) {
+      state.draggingIdx = -1;
+      canvas.style.cursor = state.validateMode ? "help" : "grab";
+    }
   });
 }
 
@@ -337,6 +461,9 @@ function drawCalibrationCanvas() {
   }
 
   const pts = state.calibPoints;
+  const geom = validateCalibrationGeometry(pts);
+  const isInvalid4 = pts.length === 4 && !geom.valid;
+
   if (pts.length > 1) {
     ctx.save();
     ctx.beginPath();
@@ -346,19 +473,32 @@ function drawCalibrationCanvas() {
     }
     if (pts.length === 4) {
       ctx.closePath();
-      ctx.fillStyle = "rgba(0, 230, 118, 0.18)";
+      ctx.fillStyle = isInvalid4 ? "rgba(255, 71, 71, 0.24)" : "rgba(0, 230, 118, 0.18)";
       ctx.fill();
     }
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "#00e676";
+    ctx.strokeStyle = isInvalid4 ? "#ff4747" : "#00e676";
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // Banner de alerta direto sobre a imagem caso a geometria esteja distorcida
+  if (isInvalid4) {
+    ctx.save();
+    ctx.fillStyle = "rgba(180, 25, 25, 0.9)";
+    ctx.fillRect(16, 16, canvas.width - 32, 38);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 16px Segoe UI";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`⚠️ ALERTA DE GEOMETRIA: ${geom.message}`, canvas.width / 2, 35);
     ctx.restore();
   }
 
   const colors = ["#00e676", "#f5b919", "#00b8ff", "#ff6b81"];
   pts.forEach((p, idx) => {
     ctx.beginPath();
-    ctx.arc(p[0], p[1], 12, 0, Math.PI * 2);
+    ctx.arc(p[0], p[1], 13, 0, Math.PI * 2);
     ctx.fillStyle = colors[idx];
     ctx.fill();
     ctx.lineWidth = 2.5;
@@ -371,6 +511,8 @@ function drawCalibrationCanvas() {
     ctx.textBaseline = "middle";
     ctx.fillText(String(idx + 1), p[0], p[1]);
   });
+
+  updateCornerLabelsUI();
 }
 
 async function saveCalibration() {
@@ -378,6 +520,17 @@ async function saveCalibration() {
     alert("Marque os 4 cantos da meia quadra antes de salvar.");
     return;
   }
+
+  const geom = validateCalibrationGeometry(state.calibPoints);
+  if (!geom.valid) {
+    const proceed = confirm(
+      `⚠️ Atenção: ${geom.message}.\n\n` +
+      `Isso fará com que a projeção em metros (x, y) da quadra fique distorcida.\n` +
+      `Deseja salvar mesmo assim? (Clique em "Cancelar" para ajustar os cantos antes)`
+    );
+    if (!proceed) return;
+  }
+
   const res = await fetch("/api/calibrate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -391,12 +544,11 @@ async function saveCalibration() {
     const data = await res.json();
     state.homography = data.homography;
     state.zones = data.zones;
-    document.getElementById("val-reproj").textContent = `${state.homography.reproj_error_px} px`;
+    document.getElementById("val-reproj").textContent = "Exato (4/4 vértices)";
     updateSetupCalibBanner();
-    alert(`Calibração salva com sucesso! Erro de reprojeção: ${state.homography.reproj_error_px} px`);
+    alert("Calibração salva com sucesso! Use o 'Clique de Inspeção em Metros' no painel lateral para validar um ponto interno da quadra.");
   }
 }
-
 // ==================== MAPA 2D VERTICAL DA MEIA QUADRA COM MAPA DE CALOR / DENSIDADE ====================
 function getCourtRect(canvas) {
   const padX = 28;
@@ -489,18 +641,31 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
     ctx.strokeRect(x1, yTop, zw, zh);
     ctx.restore();
 
-    // Rótulo da zona + contador de densidade de Acertos e Erros
+    // Rótulo da zona com ajuste automático para zonas estreitas (Avançado 3x2)
     const midZx = x1 + zw / 2;
     const midZy = yTop + zh / 2;
-    ctx.fillStyle = isTarget ? "#ffffff" : "rgba(255,255,255,0.75)";
-    ctx.font = isTarget ? "bold 11px Segoe UI" : "10px Segoe UI";
+    const compact = zw < 105;
+    ctx.fillStyle = isTarget ? "#ffffff" : "rgba(255,255,255,0.8)";
+    ctx.font = isTarget
+      ? `bold ${compact ? 9.5 : 11}px Segoe UI`
+      : `${compact ? 9 : 10}px Segoe UI`;
     ctx.textAlign = "center";
-    ctx.fillText(`Z${z.id + 1}: ${z.name}`, midZx, midZy - (zs ? 7 : 0));
 
-    if (zs && (zs.hits > 0 || zs.misses > 0)) {
-      ctx.font = "bold 10px Segoe UI";
-      ctx.fillStyle = zs.hits > 0 ? "#a8ffcf" : "#ffb8b8";
-      ctx.fillText(`✓${zs.hits} | ✗${zs.misses}`, midZx, midZy + 9);
+    if (compact) {
+      ctx.fillText(`Z${z.id + 1}`, midZx, midZy - (zs ? 11 : 5));
+      ctx.fillText(z.name, midZx, midZy + (zs ? 0 : 7));
+      if (zs && (zs.hits > 0 || zs.misses > 0)) {
+        ctx.font = "bold 9px Segoe UI";
+        ctx.fillStyle = zs.hits > 0 ? "#a8ffcf" : "#ffb8b8";
+        ctx.fillText(`✓${zs.hits} | ✗${zs.misses}`, midZx, midZy + 12);
+      }
+    } else {
+      ctx.fillText(`Z${z.id + 1}: ${z.name}`, midZx, midZy - (zs ? 7 : 0));
+      if (zs && (zs.hits > 0 || zs.misses > 0)) {
+        ctx.font = "bold 10px Segoe UI";
+        ctx.fillStyle = zs.hits > 0 ? "#a8ffcf" : "#ffb8b8";
+        ctx.fillText(`✓${zs.hits} | ✗${zs.misses}`, midZx, midZy + 9);
+      }
     }
   });
 
@@ -509,12 +674,17 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
   ctx.lineWidth = 2.2;
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
-  // Rede no topo
+  // Rede no topo com faixa visual
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.fillRect(rect.x - 8, rect.y - 4, rect.w + 16, 8);
   ctx.beginPath();
-  ctx.lineWidth = 4.5;
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "#ffffff";
   ctx.moveTo(rect.x - 8, rect.y);
   ctx.lineTo(rect.x + rect.w + 8, rect.y);
   ctx.stroke();
+  ctx.restore();
 
   // Linha de saque
   const [, sy] = metersToCourtCanvas(0, S, canvas);
@@ -536,11 +706,14 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
     bounceEvents.forEach((ev, idx) => {
       const [bx, by] = metersToCourtCanvas(ev.x_m, ev.y_m, canvas);
       const isLast = idx === bounceEvents.length - 1;
+      const isSelected = ev.shot_number === state.selectedBounceShot;
 
-      if (isLast) {
+      if (isLast || isSelected) {
         ctx.beginPath();
-        ctx.arc(bx, by, 14, 0, Math.PI * 2);
-        ctx.fillStyle = ev.is_hit ? "rgba(0, 230, 118, 0.35)" : "rgba(255, 71, 71, 0.35)";
+        ctx.arc(bx, by, isSelected ? 16 : 14, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected
+          ? "rgba(245, 185, 25, 0.45)"
+          : (ev.is_hit ? "rgba(0, 230, 118, 0.35)" : "rgba(255, 71, 71, 0.35)");
         ctx.fill();
       }
 
@@ -548,8 +721,8 @@ function drawCourt2D(canvasId, level, targetZone, hoveredZone, bounceEvents, zon
       ctx.arc(bx, by, 8.5, 0, Math.PI * 2);
       ctx.fillStyle = ev.is_hit ? "#00e676" : "#ff3b30";
       ctx.fill();
-      ctx.lineWidth = 1.8;
-      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = isSelected ? 2.5 : 1.8;
+      ctx.strokeStyle = isSelected ? "#f5b919" : "#ffffff";
       ctx.stroke();
 
       ctx.fillStyle = "#000000";
@@ -628,6 +801,7 @@ async function startTrainingSession() {
   state.lastEventCount = 0;
   state.sessionEvents = [];
   state.zoneStats = [];
+  state.selectedBounceShot = -1;
   state.popupShownForSession = false;
 
   switchView("training");
@@ -650,7 +824,6 @@ async function startTrainingSession() {
     : `Câmera Ao Vivo (${state.sourceId})`;
   document.getElementById("video-playback-controls").style.display = isVideo ? "flex" : "none";
 
-  // Se for vídeo, mostra overlay enquanto analisa o vídeo como um todo
   const overlay = document.getElementById("video-analyzing-overlay");
   overlay.style.display = isVideo ? "flex" : "none";
   document.getElementById("analyzing-bar-fill").style.width = "0%";
@@ -670,7 +843,6 @@ async function startTrainingSession() {
     })
   });
 
-  // Conecta stream MJPEG
   document.getElementById("live-video-feed").src = `/api/training/video_feed?t=${Date.now()}`;
 
   if (state.pollTimer) clearInterval(state.pollTimer);
@@ -716,7 +888,6 @@ async function pollTrainingStatus() {
       document.getElementById("trn-frame-counter").textContent = `Frame ao vivo #${st.current_frame}`;
     }
 
-    // Quando o vídeo termina de ser analisado como um todo -> Dispara Popup "Vídeo Analisado"!
     if (st.source_type === "video" && st.analysis_done && !state.popupShownForSession) {
       state.popupShownForSession = true;
       state.sessionEvents = st.events || [];
@@ -732,7 +903,6 @@ async function pollTrainingStatus() {
       populateAndOpenAnalyzedPopup(st);
     }
 
-    // No modo câmera ao vivo, atualiza conforme cada quique novo acontece
     if (st.source_type === "camera" && st.events.length > state.lastEventCount) {
       const newest = st.events[st.events.length - 1];
       playFeedbackBeep(newest.is_hit);
@@ -740,7 +910,7 @@ async function pollTrainingStatus() {
       state.sessionEvents = st.events;
       state.zoneStats = st.zone_stats || [];
       renderLiveShotLog(st.events);
-      drawCourt2D("training-court-canvas", state.level, state.targetZone, -1, st.events, state.zoneStats);
+      drawCourt2D("training-court-canvas", state.level, state.targetZone, -1, st.events, st.zoneStats);
     }
   } catch (e) {}
 }
@@ -763,7 +933,7 @@ function populateAndOpenAnalyzedPopup(st) {
   } else {
     listEl.innerHTML = evs
       .map(e => `
-        <div class="shot-item ${e.is_hit ? 'hit' : 'miss'}" onclick="jumpToBounceFromPopup(${e.frame})">
+        <div class="shot-item ${e.is_hit ? 'hit' : 'miss'}" onclick="jumpToBounceFromPopup(${e.frame}, ${e.shot_number})">
           <div>
             <strong>Quique #${e.shot_number}</strong> &bull; Tempo: <strong>${e.time_sec}s</strong> (Frame ${e.frame})
             <br/>
@@ -796,12 +966,20 @@ function closeAnalyzedPopup() {
   document.getElementById("modal-video-analyzed").style.display = "none";
 }
 
-function jumpToBounceFromPopup(frameIdx) {
+function jumpToBounceFromPopup(frameIdx, shotNumber = -1) {
   closeAnalyzedPopup();
-  seekVideoToFrame(Math.max(0, frameIdx - 25));
+  selectAndSeekBounce(frameIdx, shotNumber);
 }
 
 // ==================== CONTROLES DE REPRODUÇÃO E ATALHOS DE QUIQUES ====================
+function selectAndSeekBounce(frameIdx, shotNumber) {
+  state.selectedBounceShot = shotNumber;
+  renderBounceJumpChips(state.sessionEvents);
+  renderLiveShotLog(state.sessionEvents);
+  drawCourt2D("training-court-canvas", state.level, state.targetZone, -1, state.sessionEvents, state.zoneStats);
+  seekVideoToFrame(Math.max(0, frameIdx - 25));
+}
+
 function renderBounceJumpChips(events) {
   const wrap = document.getElementById("bounce-jump-chips");
   if (!events || events.length === 0) {
@@ -809,11 +987,14 @@ function renderBounceJumpChips(events) {
     return;
   }
   wrap.innerHTML = `<span class="muted" style="align-self:center;margin-right:4px;">Ir para Quique:</span>` +
-    events.map(e => `
-      <button class="bounce-chip ${e.is_hit ? 'hit' : 'miss'}" onclick="seekVideoToFrame(${Math.max(0, e.frame - 25)})" title="Clique para ver o Quique #${e.shot_number} no vídeo">
-        🎯 #${e.shot_number} (${e.time_sec}s) ${e.is_hit ? '✓' : '✗'}
-      </button>
-    `).join("");
+    events.map(e => {
+      const activeCls = e.shot_number === state.selectedBounceShot ? "selected" : "";
+      return `
+        <button class="bounce-chip ${e.is_hit ? 'hit' : 'miss'} ${activeCls}" onclick="selectAndSeekBounce(${e.frame}, ${e.shot_number})" title="Clique para ver o Quique #${e.shot_number} no vídeo">
+          🎯 #${e.shot_number} (${e.time_sec}s) ${e.is_hit ? '✓' : '✗'}
+        </button>
+      `;
+    }).join("");
 }
 
 function renderLiveShotLog(events) {
@@ -823,12 +1004,15 @@ function renderLiveShotLog(events) {
     return;
   }
   container.innerHTML = events
-    .map(e => `
-      <div class="shot-item ${e.is_hit ? 'hit' : 'miss'}" onclick="seekVideoToFrame(${Math.max(0, e.frame - 25)})" title="Clique para ver este quique no vídeo">
-        <span><strong>#${e.shot_number}</strong> (${e.time_sec}s) &bull; Z${e.zone_id + 1}</span>
-        <strong>${e.is_hit ? '+10' : '-5'}</strong>
-      </div>
-    `)
+    .map(e => {
+      const activeCls = e.shot_number === state.selectedBounceShot ? "selected" : "";
+      return `
+        <div class="shot-item ${e.is_hit ? 'hit' : 'miss'} ${activeCls}" onclick="selectAndSeekBounce(${e.frame}, ${e.shot_number})" title="Clique para ver este quique no vídeo">
+          <span><strong>#${e.shot_number}</strong> (${e.time_sec}s) &bull; Z${e.zone_id + 1}</span>
+          <strong>${e.is_hit ? '+10' : '-5'}</strong>
+        </div>
+      `;
+    })
     .join("");
 }
 
@@ -845,6 +1029,9 @@ async function toggleVideoPause() {
 }
 
 async function restartVideoReplay() {
+  state.selectedBounceShot = -1;
+  renderBounceJumpChips(state.sessionEvents);
+  renderLiveShotLog(state.sessionEvents);
   await fetch("/api/training/video_control", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -10,6 +10,7 @@
   --accent-green-dark: #00b35f;
   --accent-red: #ff4747;
   --accent-yellow: #f5b919;
+  --accent-cyan: #00b8ff;
   --text-main: #f0f6fc;
   --text-muted: #93acc5;
 }
@@ -19,6 +20,26 @@
   margin: 0;
   padding: 0;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Barras de rolagem personalizadas no tema escuro */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(11, 20, 30, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2b4c6e;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3d6b99;
 }
 
 html, body {
@@ -179,6 +200,12 @@ html, body {
   background: var(--bg-dark);
   color: var(--text-main);
   font-size: 0.86rem;
+  transition: border-color 0.18s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
 }
 
 .radio-group {
@@ -198,6 +225,11 @@ html, body {
   background: var(--bg-card-alt);
   cursor: pointer;
   font-size: 0.86rem;
+  transition: all 0.18s;
+}
+
+.radio-card:hover {
+  border-color: #4878a8;
 }
 
 .radio-card.active {
@@ -237,6 +269,7 @@ html, body {
 
 .level-card:hover {
   border-color: #4878a8;
+  transform: translateY(-1px);
 }
 
 .level-card.active {
@@ -337,10 +370,14 @@ html, body {
 /* Calibration View */
 .calib-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 365px;
   gap: 16px;
   height: 100%;
   min-height: 0;
+}
+
+.calib-side-card {
+  overflow-y: auto;
 }
 
 .card-header-flex {
@@ -377,8 +414,33 @@ html, body {
   margin: 6px 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  font-size: 0.8rem;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.corner-list li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 7px;
+  border-radius: 6px;
+}
+
+.px-badge {
+  font-family: Consolas, monospace;
+  font-size: 0.72rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-dark);
+  color: var(--text-muted);
+  border: 1px solid var(--border-col);
+}
+
+.px-badge.set {
+  color: var(--accent-cyan);
+  border-color: rgba(0, 184, 255, 0.45);
 }
 
 .dot {
@@ -390,8 +452,9 @@ html, body {
   justify-content: center;
   font-weight: 700;
   font-size: 0.72rem;
-  margin-right: 5px;
+  margin-right: 3px;
   color: #000;
+  flex-shrink: 0;
 }
 
 .dot.c1 { background: #00e676; }
@@ -543,6 +606,7 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .session-meta {
@@ -740,10 +804,15 @@ html, body {
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: transform 0.15s;
+  transition: all 0.15s;
 }
 
 .bounce-chip:hover {
+  transform: translateY(-1px);
+}
+
+.bounce-chip.selected {
+  box-shadow: 0 0 0 2px var(--accent-yellow);
   transform: translateY(-1px);
 }
 
@@ -791,7 +860,7 @@ html, body {
 .shot-log {
   margin-top: 4px;
   flex: 1;
-  min-height: 0;
+  min-height: 70px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -808,10 +877,16 @@ html, body {
   background: rgba(255, 255, 255, 0.04);
   border-left: 3px solid var(--border-col);
   cursor: pointer;
+  transition: background 0.15s;
 }
 
 .shot-item:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.shot-item.selected {
+  background: rgba(245, 185, 25, 0.16);
+  outline: 1px solid var(--accent-yellow);
 }
 
 .shot-item.hit { border-left-color: var(--accent-green); }
@@ -893,6 +968,10 @@ html, body {
   padding: 8px 8px;
   text-align: left;
   border-bottom: 1px solid var(--border-col);
+}
+
+.ranking-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ranking-table th {
@@ -1021,4 +1100,13 @@ html, body {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.ref-hint {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px dashed var(--border-col);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
 }

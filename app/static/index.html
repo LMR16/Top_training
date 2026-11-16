@@ -67,12 +67,12 @@
 
           <div id="video-select-box">
             <label class="field-label">Arquivo em <code>src/input_videos/</code></label>
-            <select id="select-video-file" class="input"></select>
+            <select id="select-video-file" class="input" onchange="state.sourceId = this.value"></select>
           </div>
 
           <div id="camera-select-box" style="display: none;">
             <label class="field-label">Índice da Câmera (Iriun / Webcam)</label>
-            <select id="select-camera-index" class="input"></select>
+            <select id="select-camera-index" class="input" onchange="state.sourceId = this.value"></select>
           </div>
         </div>
 
@@ -135,10 +135,22 @@
         <div class="card calib-side-card">
           <h2>Ordem dos 4 Cantos</h2>
           <ol class="corner-list">
-            <li><span class="dot c1">1</span> <strong>Fundo Esquerdo</strong> $(0,0\text{ m})$</li>
-            <li><span class="dot c2">2</span> <strong>Fundo Direito</strong> $(8,23\text{ m}, 0)$</li>
-            <li><span class="dot c3">3</span> <strong>Rede Direita</strong> $(8,23\text{ m}, 11,885\text{ m})$</li>
-            <li><span class="dot c4">4</span> <strong>Rede Esquerda</strong> $(0, 11,885\text{ m})$</li>
+            <li>
+              <span class="dot c1">1</span> <strong>Fundo Esq.</strong>
+              <span id="lbl-c1" class="px-badge">-- px</span> &rarr; (0,0 m; 0,0 m)
+            </li>
+            <li>
+              <span class="dot c2">2</span> <strong>Fundo Dir.</strong>
+              <span id="lbl-c2" class="px-badge">-- px</span> &rarr; (8,23 m; 0,0 m)
+            </li>
+            <li>
+              <span class="dot c3">3</span> <strong>Rede Dir.</strong>
+              <span id="lbl-c3" class="px-badge">-- px</span> &rarr; (8,23 m; 11,885 m)
+            </li>
+            <li>
+              <span class="dot c4">4</span> <strong>Rede Esq.</strong>
+              <span id="lbl-c4" class="px-badge">-- px</span> &rarr; (0,0 m; 11,885 m)
+            </li>
           </ol>
 
           <div class="dim-box">
@@ -155,14 +167,16 @@
 
           <label class="toggle-row">
             <input type="checkbox" id="chk-validate-mode" onchange="onToggleValidateMode()" />
-            <span>Ativar Clique de Inspeção em Metros $(x, y)$</span>
+            <span>Ativar Clique de Inspeção em Metros (x, y)</span>
           </label>
 
           <div class="validation-panel" id="validation-output">
-            <div>Erro de Reprojeção: <strong id="val-reproj">-- px</strong></div>
+            <div>Geometria: <strong id="val-geom">--</strong></div>
+            <div>Ajuste Matriz H: <strong id="val-reproj">Exato (4/4 vértices)</strong></div>
             <div>Ponto Clicado (px): <strong id="val-px">--</strong></div>
             <div>Posição na Quadra (m): <strong id="val-meters">--</strong></div>
             <div>Status: <strong id="val-inside">--</strong></div>
+            <div class="ref-hint">💡 <strong>Dica:</strong> Clique no <em>"T" do saque</em> na imagem — o valor real deve ser próximo de <strong>(4,12 m; 5,49 m)</strong>.</div>
           </div>
 
           <button class="btn-secondary full-width" style="margin-top: 10px;" onclick="switchView('zone')">Avançar para Zona-Foco &rarr;</button>
@@ -199,9 +213,9 @@
         </div>
 
         <div class="card zone-canvas-card">
-          <div class="court-label-top">REDE ($y = 11,885\text{ m}$)</div>
+          <div class="court-label-top">REDE (y = 11,885 m)</div>
           <canvas id="zone-canvas" width="420" height="580"></canvas>
-          <div class="court-label-bottom">LINHA DE FUNDO ($y = 0,0\text{ m}$)</div>
+          <div class="court-label-bottom">LINHA DE FUNDO (y = 0,0 m)</div>
         </div>
       </div>
     </section>
