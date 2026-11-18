@@ -1632,6 +1632,427 @@
             "score_after": 25
           }
         ]
+      },
+      {
+        "date": "18/11/2026 08:52",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_2.mp4",
+        "score": 0,
+        "hits": 0,
+        "misses": 1,
+        "total_shots": 1,
+        "accuracy": 0.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 885,
+            "time_sec": 29.53,
+            "pixel_u": 1075.4,
+            "pixel_v": 426.2,
+            "x_m": 2.072,
+            "y_m": 1.366,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 08:52",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_3.mp4",
+        "score": 10,
+        "hits": 1,
+        "misses": 1,
+        "total_shots": 2,
+        "accuracy": 50.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 81,
+            "time_sec": 2.7,
+            "pixel_u": 715.6,
+            "pixel_v": 733.8,
+            "x_m": 2.291,
+            "y_m": 3.526,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 2,
+            "frame": 173,
+            "time_sec": 5.77,
+            "pixel_u": 1214.1,
+            "pixel_v": 720.6,
+            "x_m": 6.017,
+            "y_m": 3.956,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 08:53",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_3.mp4",
+        "score": 10,
+        "hits": 1,
+        "misses": 0,
+        "total_shots": 1,
+        "accuracy": 100.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 47,
+            "time_sec": 1.57,
+            "pixel_u": 944.8,
+            "pixel_v": 326.3,
+            "x_m": 4.354,
+            "y_m": 1.611,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 08:54",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_1.mp4",
+        "score": 0,
+        "hits": 0,
+        "misses": 0,
+        "total_shots": 0,
+        "accuracy": 0.0,
+        "events": []
+      },
+      {
+        "date": "18/11/2026 08:55",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_1.mp4",
+        "score": 20,
+        "hits": 3,
+        "misses": 2,
+        "total_shots": 5,
+        "accuracy": 60.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 21,
+            "time_sec": 0.7,
+            "pixel_u": 519.3,
+            "pixel_v": 605.7,
+            "x_m": 4.219,
+            "y_m": 2.045,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 83,
+            "time_sec": 2.77,
+            "pixel_u": 500.7,
+            "pixel_v": 603.7,
+            "x_m": 4.027,
+            "y_m": 2.093,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 5
+          },
+          {
+            "shot_number": 3,
+            "frame": 144,
+            "time_sec": 4.8,
+            "pixel_u": 535.1,
+            "pixel_v": 600.0,
+            "x_m": 4.387,
+            "y_m": 2.189,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 15
+          },
+          {
+            "shot_number": 4,
+            "frame": 205,
+            "time_sec": 6.83,
+            "pixel_u": 531.8,
+            "pixel_v": 601.1,
+            "x_m": 4.351,
+            "y_m": 2.161,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 1,
+            "is_hit": true,
+            "score_after": 25
+          },
+          {
+            "shot_number": 5,
+            "frame": 272,
+            "time_sec": 9.07,
+            "pixel_u": 503.3,
+            "pixel_v": 596.6,
+            "x_m": 4.054,
+            "y_m": 2.275,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 20
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 08:56",
+        "level": "basico",
+        "target_zone": 1,
+        "source": "video:treino_1.mp4",
+        "score": 0,
+        "hits": 0,
+        "misses": 0,
+        "total_shots": 0,
+        "accuracy": 0.0,
+        "events": []
+      },
+      {
+        "date": "18/11/2026 09:20",
+        "level": "basico",
+        "target_zone": 0,
+        "source": "video:quadra_2.MOV",
+        "score": 5,
+        "hits": 1,
+        "misses": 3,
+        "total_shots": 4,
+        "accuracy": 25.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 104,
+            "time_sec": 3.47,
+            "pixel_u": 1073.6,
+            "pixel_v": 784.3,
+            "x_m": 4.7,
+            "y_m": 1.344,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 2,
+            "frame": 143,
+            "time_sec": 4.77,
+            "pixel_u": 1093.2,
+            "pixel_v": 646.4,
+            "x_m": 5.129,
+            "y_m": 8.831,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 3,
+            "frame": 272,
+            "time_sec": 9.07,
+            "pixel_u": 906.2,
+            "pixel_v": 766.6,
+            "x_m": 3.904,
+            "y_m": 2.112,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 0,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 4,
+            "frame": 310,
+            "time_sec": 10.33,
+            "pixel_u": 971.4,
+            "pixel_v": 644.7,
+            "x_m": 4.285,
+            "y_m": 9.113,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 5
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 09:21",
+        "level": "avancado",
+        "target_zone": 1,
+        "source": "video:treino_3.mp4",
+        "score": 0,
+        "hits": 0,
+        "misses": 2,
+        "total_shots": 2,
+        "accuracy": 0.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 81,
+            "time_sec": 2.7,
+            "pixel_u": 715.6,
+            "pixel_v": 733.8,
+            "x_m": 2.274,
+            "y_m": 3.597,
+            "zone_id": 0,
+            "zone_name": "Funda Esquerda",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          },
+          {
+            "shot_number": 2,
+            "frame": 173,
+            "time_sec": 5.77,
+            "pixel_u": 1214.1,
+            "pixel_v": 720.6,
+            "x_m": 6.041,
+            "y_m": 3.94,
+            "zone_id": 2,
+            "zone_name": "Funda Direita",
+            "target_zone": 1,
+            "is_hit": false,
+            "score_after": 0
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 09:22",
+        "level": "avancado",
+        "target_zone": 0,
+        "source": "video:treino_3.mp4",
+        "score": 5,
+        "hits": 1,
+        "misses": 1,
+        "total_shots": 2,
+        "accuracy": 50.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 81,
+            "time_sec": 2.7,
+            "pixel_u": 715.6,
+            "pixel_v": 733.8,
+            "x_m": 2.274,
+            "y_m": 3.597,
+            "zone_id": 0,
+            "zone_name": "Funda Esquerda",
+            "target_zone": 0,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 173,
+            "time_sec": 5.77,
+            "pixel_u": 1214.1,
+            "pixel_v": 720.6,
+            "x_m": 6.041,
+            "y_m": 3.94,
+            "zone_id": 2,
+            "zone_name": "Funda Direita",
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 5
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 09:38",
+        "level": "basico",
+        "target_zone": 0,
+        "source": "video:treino_2.mp4",
+        "score": 10,
+        "hits": 1,
+        "misses": 0,
+        "total_shots": 1,
+        "accuracy": 100.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 885,
+            "time_sec": 29.53,
+            "pixel_u": 1075.4,
+            "pixel_v": 426.2,
+            "x_m": 2.072,
+            "y_m": 1.366,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 0,
+            "is_hit": true,
+            "score_after": 10
+          }
+        ]
+      },
+      {
+        "date": "18/11/2026 09:38",
+        "level": "basico",
+        "target_zone": 0,
+        "source": "video:treino_3.mp4",
+        "score": 5,
+        "hits": 1,
+        "misses": 1,
+        "total_shots": 2,
+        "accuracy": 50.0,
+        "events": [
+          {
+            "shot_number": 1,
+            "frame": 81,
+            "time_sec": 2.7,
+            "pixel_u": 715.6,
+            "pixel_v": 733.8,
+            "x_m": 2.274,
+            "y_m": 3.597,
+            "zone_id": 0,
+            "zone_name": "Esquerda (Cruzada)",
+            "target_zone": 0,
+            "is_hit": true,
+            "score_after": 10
+          },
+          {
+            "shot_number": 2,
+            "frame": 173,
+            "time_sec": 5.77,
+            "pixel_u": 1214.1,
+            "pixel_v": 720.6,
+            "x_m": 6.041,
+            "y_m": 3.94,
+            "zone_id": 1,
+            "zone_name": "Direita (Paralela)",
+            "target_zone": 0,
+            "is_hit": false,
+            "score_after": 5
+          }
+        ]
       }
     ]
   },

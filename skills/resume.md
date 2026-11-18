@@ -74,7 +74,8 @@ Top_training/
 │
 └── skills/
     ├── resume.md                   # Este arquivo de referência rápida geral do projeto
-    └── interface_app.md            # Especificação detalhada da interface gráfica atual (5 telas, modal, canvas 2D e rotas)
+    ├── interface_app.md            # Especificação detalhada da interface gráfica (Stealth Dark Minimal)
+    └── project_specs.md            # Especificação técnica completa: linguagens, fluxograma, cálculos, avaliação dos modelos e melhorias
 ```
 
 ---
