@@ -61,6 +61,9 @@ Top_training/
 │   └── detect/                     # Saídas brutas de testes do YOLO
 │
 ├── docs/                           # Documentação do projeto
+│   ├── arquitetura_geral.png       # [IMAGEM] Diagrama Macro da arquitetura (Entrada, API, CV, Front-End)
+│   ├── arquitetura_detalhada.png    # [IMAGEM] Diagrama Técnico Detalhado (PyTorch, OpenCV, NumPy, Pandas, Homografia)
+│   ├── arquitetura_completa.png    # [IMAGEM] Painel consolidado em alta definição (300 DPI)
 │   ├── arquitetura_app_js.md       # Especificação das 20 decisões do App JS + FastAPI e Trabalhos Futuros (Smartwatch)
 │   ├── plano_acao_latencia_video.md # Plano de ação técnico para redução de latência e transmissão de vídeo
 │   ├── Entrega_2/
@@ -69,7 +72,7 @@ Top_training/
 │   │   ├── Projeto_integrador_rel_1 (1).pdf
 │   │   ├── Projeto_integrador_rel_1.md      # Transcrição do relatório 1 em Markdown
 │   │   ├── requisitos_status.png            # Imagem 16:9 de status dos requisitos
-│   │   └── img/                             # Figuras da interface e do treino para compilação do LaTeX
+│   │   └── img/                             # Figuras da interface, do treino e diagramas de arquitetura (.png / .jpg)
 │   ├── escopo.md, arquitetura.md, roteiro.md, treino_modelo.md
 │
 └── skills/
